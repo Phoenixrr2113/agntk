@@ -8,7 +8,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { isDangerousCommand } from '../utils/shell';
+import { isDangerousCommand, buildSanitizedEnv } from '../utils/shell';
 import { MAX_COMMAND_LENGTH, MAX_CWD_LENGTH } from './constants';
 
 // ============================================================================
@@ -33,11 +33,41 @@ export interface BackgroundSession {
 
 const MAX_BUFFER = 1024 * 1024; // 1MB
 const ROLLING_BUFFER = 512 * 1024; // 512KB
+const MAX_SESSIONS = 20;
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 const backgroundSessions = new Map<string, BackgroundSession>();
 
 function generateSessionId(): string {
   return `bg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Evict completed/stopped sessions when at capacity, or the oldest expired session.
+ * M-1: prevents the Map from growing indefinitely.
+ */
+function evictSessions(): void {
+  const now = Date.now();
+
+  // First, remove TTL-expired entries regardless of capacity
+  for (const [id, session] of backgroundSessions.entries()) {
+    if (now - session.startedAt > SESSION_TTL_MS) {
+      if (session.status === 'running') {
+        try { session.process.kill('SIGTERM'); } catch { /* ignore */ }
+      }
+      backgroundSessions.delete(id);
+    }
+  }
+
+  // Then, if still over cap, evict oldest completed/stopped session
+  if (backgroundSessions.size >= MAX_SESSIONS) {
+    for (const [id, session] of backgroundSessions.entries()) {
+      if (session.status !== 'running') {
+        backgroundSessions.delete(id);
+        if (backgroundSessions.size < MAX_SESSIONS) break;
+      }
+    }
+  }
 }
 
 /** Get all sessions (for testing). */
@@ -63,12 +93,24 @@ function startBackgroundProcess(
   command: string,
   options: { cwd?: string; env?: Record<string, string> } = {},
 ): BackgroundSession {
+  // Evict old sessions before adding a new one (M-1)
+  evictSessions();
+
   const sessionId = generateSessionId();
-  const { cwd = process.cwd(), env } = options;
+  const { cwd = process.cwd() } = options;
+
+  // S-12: filter user-supplied env — strip secrets and disallow PATH/LD_PRELOAD overrides
+  const filteredExtra: Record<string, string> = {};
+  if (options.env) {
+    for (const [k, v] of Object.entries(options.env)) {
+      if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH') continue; // block dangerous overrides
+      filteredExtra[k] = v;
+    }
+  }
 
   const proc = spawn('bash', ['-c', command], {
     cwd,
-    env: { ...process.env, ...env, TERM: 'dumb' },
+    env: { ...buildSanitizedEnv(filteredExtra), TERM: 'dumb' },
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

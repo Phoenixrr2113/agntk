@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 
-import { executeCommand, isDangerousCommand } from '../utils/shell';
+import { executeCommand, isDangerousCommand, validateCwd } from '../utils/shell';
 import { success, error } from '../utils/tool-result';
 import { ToolError, ToolErrorType } from '../utils/errors';
 
@@ -34,7 +34,13 @@ export function createShellTool(workspaceRoot: string) {
         addToAllowlist(command);
       }
 
-      const effectiveCwd = cwd ?? workspaceRoot;
+      // S-13: Validate cwd is within workspace root
+      let effectiveCwd: string;
+      try {
+        effectiveCwd = cwd ? validateCwd(cwd, workspaceRoot) : workspaceRoot;
+      } catch (err) {
+        return error(err instanceof Error ? err.message : 'Invalid working directory');
+      }
 
       const result = await executeCommand(command, {
         cwd: effectiveCwd,

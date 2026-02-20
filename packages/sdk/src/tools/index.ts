@@ -4,19 +4,6 @@
  * Central export for tool factory, provider, and utilities.
  */
 
-// Factory
-export {
-  ToolFactory,
-  defaultToolFactory,
-  mergeToolSets,
-  filterTools,
-  excludeTools,
-  getToolNames,
-  type ToolDependencies,
-  type ToolSet,
-  type ToolCreator,
-} from './factory';
-
 // Glob Tool
 export {
   globTool,

@@ -95,12 +95,15 @@ export function buildReflectionPrompt(
  * Create a `prepareStep` function for the AI SDK that injects reflection
  * prompts into the system message at appropriate steps.
  *
- * @param baseSystem - The original system prompt to augment.
+ * @param baseSystem - The original system prompt, or a getter that returns
+ *   the current system prompt. Use a getter (`() => prompt`) when the prompt
+ *   is mutated after creation (e.g. memory injection during ensureInit) so
+ *   that reflection always uses the latest value (fixes DESIGN-001 race).
  * @param config - The reflection configuration.
  * @returns A prepareStep function compatible with AI SDK's ToolLoopAgent.
  */
 export function createReflectionPrepareStep<TOOLS extends Record<string, Tool> = Record<string, Tool>>(
-  baseSystem: string,
+  baseSystem: string | (() => string),
   config: ReflectionConfig,
 ): (input: PrepareStepInput<TOOLS>) => { system?: string } | undefined {
   // If no reflection, return a no-op
@@ -112,9 +115,12 @@ export function createReflectionPrepareStep<TOOLS extends Record<string, Tool> =
     const reflection = buildReflectionPrompt(config, stepNumber);
     if (!reflection) return undefined;
 
-    // Augment the system prompt with the reflection block
+    // Resolve base system at call-time so memory/context injected after
+    // createReflectionPrepareStep() is called is always picked up.
+    const base = typeof baseSystem === 'function' ? baseSystem() : baseSystem;
+
     return {
-      system: `${baseSystem}\n\n${reflection}`,
+      system: `${base}\n\n${reflection}`,
     };
   };
 }

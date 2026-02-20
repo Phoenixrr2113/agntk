@@ -7,6 +7,7 @@
 
 import type { LanguageModel, LanguageModelUsage, Tool } from 'ai';
 import type { UsageLimits } from '../usage-limits';
+import type { ApprovalConfig } from '../tools/approval';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // AgentOptions
@@ -62,6 +63,16 @@ export interface AgentOptions {
    * Useful for testing with mock tools or adding custom capabilities.
    */
   tools?: Record<string, Tool>;
+
+  /**
+   * Enable human-in-the-loop approval for dangerous tools.
+   *
+   * - `true` — use defaults (shell, browser, file_write, file_edit, file_create require approval)
+   * - `ApprovalConfig` — full control over which tools require approval, timeout behaviour, etc.
+   *
+   * @default false (no approval required)
+   */
+  approval?: boolean | ApprovalConfig;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

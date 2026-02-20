@@ -45,7 +45,35 @@ function resolveAndValidatePath(filePath: string, workspaceRoot: string): string
     throw new Error(`Path "${filePath}" is outside workspace root`);
   }
 
-  return resolved;
+  // F-1 fix: return the canonical (realpath) so all subsequent I/O uses the
+  // resolved target, not the original path that could race with symlink changes.
+  return realResolved;
+}
+
+// ============================================================================
+// Sensitive Path Blocklist (A-2)
+// ============================================================================
+
+/**
+ * Patterns for paths that must never be read by the agent.
+ * Prevents accidental exposure of credentials and private keys.
+ */
+const SENSITIVE_PATH_PATTERNS: RegExp[] = [
+  /\/\.env(\.|$)/,           // .env, .env.local, .env.production, etc.
+  /\/\.ssh\//,              // ~/.ssh/ directory
+  /authorized_keys$/,
+  /id_rsa(\.pub)?$/,
+  /id_ed25519(\.pub)?$/,
+  /id_ecdsa(\.pub)?$/,
+  /id_dsa(\.pub)?$/,
+  /\/\.netrc$/,
+  /\/\.pgpass$/,
+  /\/\.aws\/credentials$/,
+  /\/\.aws\/config$/,
+];
+
+function isSensitivePath(resolvedPath: string): boolean {
+  return SENSITIVE_PATH_PATTERNS.some((p) => p.test(resolvedPath));
 }
 
 // ============================================================================
@@ -69,6 +97,11 @@ export function createFileReadTool(workspaceRoot: string = process.cwd()) {
     execute: async ({ path: filePath, startLine, endLine }) => {
       try {
         const resolved = resolveAndValidatePath(filePath, workspaceRoot);
+
+        // A-2: Block access to sensitive credential files
+        if (isSensitivePath(resolved)) {
+          return error(`Reading sensitive paths is not permitted: ${filePath}`);
+        }
 
         if (!fs.existsSync(resolved)) {
           return error(`File not found: ${filePath}`);

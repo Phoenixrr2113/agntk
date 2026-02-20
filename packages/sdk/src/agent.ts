@@ -35,6 +35,7 @@ import { createReflectionPrepareStep } from './reflection';
 import { runGuardrails, handleGuardrailResults } from './guardrails/runner';
 import { contentFilter } from './guardrails/built-ins';
 import type { Guardrail } from './guardrails/types';
+import { applyApproval, resolveApprovalConfig } from './tools/approval';
 import { MarkdownMemoryStore } from './memory/store';
 import { loadMemoryContext } from './memory/loader';
 import { createMemoryTools } from './memory/tools';
@@ -255,20 +256,29 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
   }
 
   // ── 9. Reflection — always on (reflact strategy) ──────────────────────
-  const prepareStep = createReflectionPrepareStep(augmentedSystemPrompt, {
+  // Pass a getter so reflection always reads the current augmentedSystemPrompt,
+  // even after memory/context is injected during ensureInit() (fixes DESIGN-001).
+  const prepareStep = createReflectionPrepareStep(() => augmentedSystemPrompt, {
     strategy: 'reflact',
   });
 
   // ── 10. Guardrails — always on (output: PII content filter) ───────────
   const outputGuardrails: Guardrail[] = [contentFilter()];
 
-  // ── 11. Telemetry — auto-detect ───────────────────────────────────────
+  // ── 11. Apply approval wrapping if requested ───────────────────────────
+  const approvalConfig = resolveApprovalConfig(options.approval);
+  if (approvalConfig) {
+    tools = applyApproval(tools, approvalConfig) as ToolSet;
+    log.info('Approval system enabled', { tools: approvalConfig.tools ?? 'default dangerous tools' });
+  }
+
+  // ── 12. Telemetry — auto-detect ──────────────────────────────────────
   const telemetryEnabled = detectTelemetry();
   const telemetrySettings = telemetryEnabled
     ? createTelemetrySettings({ functionId: `agent:${name}` })
     : undefined;
 
-  // ── 12. Build the ToolLoopAgent ───────────────────────────────────────
+  // ── 13. Build the ToolLoopAgent ──────────────────────────────────────
   const toolLoopAgent = new ToolLoopAgent({
     model,
     instructions: augmentedSystemPrompt,
@@ -295,55 +305,61 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
     if (initPromise) return initPromise;
 
     initPromise = (async () => {
-      // Load memory context into system prompt
       try {
-        const memoryContext = await loadMemoryContext(memoryStore);
-        if (memoryContext) {
-          augmentedSystemPrompt = memoryContext + '\n\n' + augmentedSystemPrompt;
-          agentLog.debug('Memory context injected', { chars: memoryContext.length });
-        }
-      } catch (err) {
-        agentLog.warn('Memory context loading failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
-      // Inject dynamic environment context
-      try {
-        augmentedSystemPrompt = await buildDynamicSystemPrompt(augmentedSystemPrompt, {
-          workspaceRoot,
-          includeWorkspaceMap: true,
-        });
-      } catch (err) {
-        agentLog.warn('Dynamic context injection failed', {
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-
-      // Apply durable wrapping if workflow runtime is available
-      try {
-        const workflowAvailable = await checkWorkflowAvailability();
-        if (workflowAvailable) {
-          tools = wrapToolsAsDurable(tools, { retryCount: 3 }) as ToolSet;
-          agentLog.info('Durable tool wrapping active');
-        }
-      } catch {
-        agentLog.debug('Workflow detection failed — skipping durable wrapping');
-      }
-
-      // Initialize telemetry if detected
-      if (telemetryEnabled) {
+        // Load memory context into system prompt
         try {
-          await initObservability({ provider: 'langfuse' });
-          agentLog.info('Telemetry initialized');
+          const memoryContext = await loadMemoryContext(memoryStore);
+          if (memoryContext) {
+            augmentedSystemPrompt = memoryContext + '\n\n' + augmentedSystemPrompt;
+            agentLog.debug('Memory context injected', { chars: memoryContext.length });
+          }
         } catch (err) {
-          agentLog.warn('Telemetry initialization failed', {
+          agentLog.warn('Memory context loading failed', {
             error: err instanceof Error ? err.message : String(err),
           });
         }
-      }
 
-      initialized = true;
+        // Inject dynamic environment context
+        try {
+          augmentedSystemPrompt = await buildDynamicSystemPrompt(augmentedSystemPrompt, {
+            workspaceRoot,
+            includeWorkspaceMap: true,
+          });
+        } catch (err) {
+          agentLog.warn('Dynamic context injection failed', {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+
+        // Apply durable wrapping if workflow runtime is available
+        try {
+          const workflowAvailable = await checkWorkflowAvailability();
+          if (workflowAvailable) {
+            tools = wrapToolsAsDurable(tools, { retryCount: 3 }) as ToolSet;
+            agentLog.info('Durable tool wrapping active');
+          }
+        } catch {
+          agentLog.debug('Workflow detection failed — skipping durable wrapping');
+        }
+
+        // Initialize telemetry if detected
+        if (telemetryEnabled) {
+          try {
+            await initObservability({ provider: 'langfuse' });
+            agentLog.info('Telemetry initialized');
+          } catch (err) {
+            agentLog.warn('Telemetry initialization failed', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
+        initialized = true;
+      } catch (err) {
+        // E-5: Reset so callers can retry instead of permanently failing
+        initPromise = null;
+        throw err;
+      }
     })();
 
     return initPromise;

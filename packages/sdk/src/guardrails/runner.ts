@@ -197,6 +197,10 @@ export function wrapWithGuardrails<T extends { text: string }>(
       break;
     }
 
-    return lastResult!;
+    // E-2: Guard against undefined lastResult (reachable when maxRetries=0 and output blocked)
+    if (!lastResult) {
+      throw new GuardrailBlockedError('output', []);
+    }
+    return lastResult;
   };
 }
