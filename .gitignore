@@ -38,3 +38,6 @@ Thumbs.db
 apps/demo/.vectra-memory/index.json
 .vectra-memory/
 apps/docs/.astro
+UNIFIED-AGENT-DESIGN.md
+.gitignore
+CODEBASE-REVIEW.md
