@@ -6,8 +6,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
+import { bearerAuth } from 'hono/bearer-auth';
 import { createLogger, getLogEmitter } from '@agntk/logger';
-import { createLoggingMiddleware, createRateLimitMiddleware, createAuthMiddleware, createBodyLimitMiddleware } from './middleware';
+import { createLoggingMiddleware, createRateLimitMiddleware, createBodyLimitMiddleware } from './middleware';
 import { ConcurrencyQueue, QueueFullError, QueueTimeoutError } from './queue';
 import { StreamEventBuffer } from './stream-buffer';
 import type { AgentServerOptions, DurableAgentInstance } from './types';
@@ -70,21 +71,43 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   app.use('*', createLoggingMiddleware());
   app.use('*', createBodyLimitMiddleware({ maxSize: serverOptions.maxBodySize }));
 
-  // Rate limiter shared instance (avoids creating separate maps per route)
+  if (!serverOptions.apiKey) {
+    log.warn(
+      '⚠️  No apiKey configured — all server endpoints are publicly accessible. ' +
+      'Set apiKey in AgentServerOptions for production use.',
+    );
+  }
+
+  // Rate limiter shared instance
   const rateLimiter = createRateLimitMiddleware({ windowMs: 60000, max: 100 });
-  const authMiddleware = serverOptions.apiKey 
-    ? createAuthMiddleware({ apiKey: serverOptions.apiKey }) 
+
+  // Auth middleware: prefer Hono's built-in bearerAuth over our custom impl.
+  // Accepts both `Authorization: Bearer <token>` and `x-api-key: <token>`.
+  const authMiddleware = serverOptions.apiKey
+    ? bearerAuth({
+      verifyToken: (token) => token === serverOptions.apiKey,
+    })
     : null;
 
-  // Apply rate limiting and auth to agent endpoints
+  // Apply rate limiting to all agent endpoints
   app.use('/generate', rateLimiter);
   app.use('/stream', rateLimiter);
   app.use('/chat', rateLimiter);
 
+  // Apply auth to ALL sensitive endpoints when apiKey is configured.
+  // Previously only /generate, /stream, /chat were protected — this extends
+  // coverage to config r/w, logs streaming, and hook approval endpoints.
   if (authMiddleware) {
-    app.use('/generate', authMiddleware);
-    app.use('/stream', authMiddleware);
-    app.use('/chat', authMiddleware);
+    const PROTECTED_ROUTES = [
+      '/generate', '/stream', '/chat',
+      '/status', '/config',
+      '/logs',
+      '/hooks', '/hooks/*',
+      '/queue',
+    ];
+    for (const route of PROTECTED_ROUTES) {
+      app.use(route, authMiddleware);
+    }
   }
 
   // Create concurrency queue

@@ -18,12 +18,23 @@ import * as fs from 'node:fs';
  *  S-6: Pipe-to-shell / download-and-execute bypass
  */
 const DANGEROUS_PATTERNS = [
-  // S-1: rm -r/-rf targeting dangerous targets (., .., *, /, ~, empty, command substitution)
-  // Blocks: rm -rf ., rm -rf *, rm -rf /, rm -rf ~, rm -rf $(pwd)
-  // Allows:  rm -rf ./dist, rm -rf ./node_modules, rm -rf ./build
-  /\brm\s+(-[^\s]*r[^\s]*\s+|--recursive\s+)(\.|\.\.|\/|\*|~|\$[({`])/i,
-  // Also catch rm -f targeting those same dangerous targets directly
-  /\brm\s+-[^\s]*f[^\s]*\s*(\/|~|\*|\$[({`]|\.\.?(\/|$|\s))/i,
+  // S-1: rm -r/-rf targeting dangerous targets.
+  //
+  // Dangerous targets: bare `.` (current dir), `..` (parent), `*` (glob all),
+  //   `/` (root), `~` (home), `$(...)` or `${...}` or `` ` `` (command sub)
+  // Safe targets:  `./dist`, `./node_modules`, `./build`, etc. (explicit relative path)
+  //
+  // Strategy: after flags, match a target that is NOT `.` followed by `/`.
+  // `(?!\.[/\w])` means: NOT `.` followed by slash or word char — i.e. not `./dist`.
+  // We then explicitly enumerate dangerous patterns.
+  /\brm\s+(-[^\s]*r[^\s]*\s+|--recursive\s+)((?<!\.)\.\.(?![^\s])|(?<=\s)\.(?=[\s$])|(?<=\s)\.(?=\s|$)|\*|\/|~|\$[({`])/i,
+  // Simpler, more readable alternative that splits into two patterns:
+  // Pattern A: rm -r targeting .. or * or / or ~ or command sub
+  /\brm\s+-[^\s]*r[^\s]*\s+(\*|\/|~|\$[({]|`|\.\.(\s|$|\/))/i,
+  // Pattern B: rm -r targeting bare . (not followed by / or word char meaning ./dist)
+  /\brm\s+-[^\s]*r[^\s]*\s+\.(?![\w\/])/i,
+  // Pattern C: rm without -r but with -f targeting absolute or dangerous paths
+  /\brm\s+-[^\s]*f[^\s]*\s+(\*|~|\$[({]|`|\.\.(\s|$|\/)|\/(?!tmp|var\/tmp))/i,
 
   // S-2: Nested interpreter invocation
   /\b(bash|sh|zsh|dash|ksh|fish|tcsh)\s+(-[ce]|--[a-z]+\s)/i,
@@ -41,10 +52,10 @@ const DANGEROUS_PATTERNS = [
   /:\(\s*\)\s*\{/,
   /:\s*\(\s*\)\s*\{.*:\s*\|\s*:/,
 
-  // S-5: chmod with dangerous modes
-  /\bchmod\s+(-R\s+)?([0-7]*[2467][0-9]{2}|\+s|o\+w|a\+w|u\+s|g\+s)/i,
-  // Keep 755/644/600 allowed — block 666, 777, setuid/setgid numeric forms
-  /\bchmod\s+(-R\s+)?(666|777|4[0-9]{3}|2[0-9]{3})/i,
+  // S-5: chmod dangerous modes (setuid, setgid, world-write, 666, 777)
+  // Allows: 644, 755, 600, 700, u+x, go-w etc.
+  // Blocks: 666, 777, 4xxx (setuid), 2xxx (setgid), +s, o+w, a+w, u+s, g+s
+  /\bchmod\s+(-R\s+)?(666|777|4[0-9]{3}|2[0-9]{3}|\+s|o\+w|a\+w|u\+s|g\+s)/i,
 
   // S-6: Pipe-to-shell and download-execute bypasses
   /\b(curl|wget)\b.*\|\s*(bash|sh|zsh|dash|python3?|node)/i,
@@ -65,6 +76,18 @@ const DANGEROUS_PATTERNS = [
   /;\s*eval\s/,
   /&&\s*eval\s/,
   /\|\s*eval\s/,
+
+  // MITRE T1027.010: Decode-then-execute bypass patterns
+  // base64 -d / --decode / openssl base64 decode → piped to shell
+  /\b(base64\s+-d|base64\s+--decode|openssl\s+enc\s+-d)\b.*\|\s*(bash|sh|zsh|dash|node|python3?)/i,
+  // xxd hex-decode → piped to shell
+  /\b(xxd\s+-r|xxd\s+--reverse)\b.*\|\s*(bash|sh|zsh|dash|node|python3?)/i,
+  // gzip decompress → piped to shell
+  /\bgzip\s+(-d|--decompress)\b.*\|\s*(bash|sh|zsh|dash)/i,
+  // printf with hex escapes → piped to shell
+  /\bprintf\b.*\\x[0-9a-fA-F]{2}.*\|\s*(bash|sh|zsh|dash)/i,
+  // ANSI-C quoting with octal escapes: $'\173\40...' | sh
+  /\$'\\[0-7]{3,}'.*\|\s*(bash|sh|zsh|dash)/i,
 ];
 
 export function isDangerousCommand(command: string): boolean {

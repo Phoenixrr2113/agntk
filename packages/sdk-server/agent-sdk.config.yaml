@@ -1,0 +1,5 @@
+models:
+  defaultProvider: openai
+  tiers:
+    standard: gpt-4o
+    fast: gpt-4o-mini

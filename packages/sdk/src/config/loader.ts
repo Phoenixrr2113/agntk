@@ -14,10 +14,18 @@ import type { ModelTier, Provider } from './schema';
 const log = createLogger('@agntk/core:config');
 
 // ============================================================================
-// Global Config State
+// Config State — keyed by resolved searchDir (DESIGN-002)
 // ============================================================================
 
-let globalConfig: AgentConfig | null = null;
+/**
+ * Per-directory config cache.
+ * Prevents state bleed when multiple agents with different workspace roots
+ * run in the same Node.js process (e.g. server serving parallel requests).
+ *
+ * Key: resolved absolute searchDir path
+ * Value: merged AgentConfig for that directory
+ */
+const configCache = new Map<string, AgentConfig>();
 
 // ============================================================================
 // Config File Discovery
@@ -184,34 +192,47 @@ export function loadConfig(searchDir: string = process.cwd()): AgentConfig {
   const envConfig = getEnvConfig();
   config = deepMerge(config, envConfig);
 
-  globalConfig = config;
   return config;
 }
 
 /**
- * Get the current config, loading if necessary.
+ * Get the config for a given search directory, loading and caching if needed.
+ *
+ * @param searchDir  Directory to search for config files (default: process.cwd())
  */
-export function getConfig(): AgentConfig {
-  if (!globalConfig) {
-    globalConfig = loadConfig();
+export function getConfig(searchDir: string = process.cwd()): AgentConfig {
+  const key = resolve(searchDir);
+  if (!configCache.has(key)) {
+    configCache.set(key, loadConfig(searchDir));
   }
-  return globalConfig;
+  return configCache.get(key)!;
 }
 
 /**
- * Configure the global settings programmatically.
+ * Configure settings programmatically for a given directory.
+ *
+ * @param options    Config overrides to merge in
+ * @param searchDir  Directory key to update (default: process.cwd())
  */
-export function configure(options: PartialAgentConfig): void {
-  const current = getConfig();
-  globalConfig = deepMerge(current, options);
-  log.debug('Config updated', { options });
+export function configure(options: PartialAgentConfig, searchDir: string = process.cwd()): void {
+  const key = resolve(searchDir);
+  const current = getConfig(searchDir);
+  configCache.set(key, deepMerge(current, options));
+  log.debug('Config updated', { options, searchDir: key });
 }
 
 /**
- * Reset config to defaults.
+ * Reset config for one directory (or all if none specified).
+ *
+ * Passing no argument clears the entire cache — useful in tests to avoid
+ * cross-test contamination.
  */
-export function resetConfig(): void {
-  globalConfig = null;
+export function resetConfig(searchDir?: string): void {
+  if (searchDir) {
+    configCache.delete(resolve(searchDir));
+  } else {
+    configCache.clear();
+  }
 }
 
 /**
