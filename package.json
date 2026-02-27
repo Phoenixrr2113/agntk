@@ -18,7 +18,7 @@
     "docs:build": "node scripts/sync-readme-to-docs.mjs && pnpm --filter site run build",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "changeset publish",
+    "release": "bash scripts/release.sh",
     "size": "size-limit"
   },
   "devDependencies": {
