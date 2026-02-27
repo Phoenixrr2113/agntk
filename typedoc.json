@@ -6,7 +6,7 @@
     "packages/logger/src/index.ts",
     "packages/brain/src/index.ts"
   ],
-  "out": "apps/docs/src/content/docs/api",
+  "out": "apps/site/src/content/docs/api",
   "plugin": ["typedoc-plugin-markdown"],
   "markdown": {
     "entryDocument": "index.md"

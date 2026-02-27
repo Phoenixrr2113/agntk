@@ -37,7 +37,8 @@ coverage/
 Thumbs.db
 apps/demo/.vectra-memory/index.json
 .vectra-memory/
-apps/docs/.astro
+apps/site/.astro
+apps/site/.vercel
 UNIFIED-AGENT-DESIGN.md
 CODEBASE-REVIEW.md
 .vercel/

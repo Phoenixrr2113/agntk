@@ -1,0 +1,27 @@
+{
+  "name": "site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "agntk documentation site + free-tier API proxy",
+  "scripts": {
+    "sync": "node ../../scripts/sync-readme-to-docs.mjs",
+    "dev": "npm run sync && astro dev",
+    "build": "astro build",
+    "build:local": "npm run sync && npm run build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.37.6",
+    "@astrojs/vercel": "^8.0.0",
+    "@fontsource-variable/inter": "^5.0.0",
+    "@fontsource/jetbrains-mono": "^5.0.0",
+    "@upstash/ratelimit": "^2.0.0",
+    "@upstash/redis": "^1.34.0",
+    "astro": "^5.17.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.5.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -46,7 +46,7 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
   },
   'agntk-free': {
     name: 'agntk-free',
-    baseURL: 'https://api.agntk.dev/v1',
+    baseURL: 'https://api.agntk.dev/api/v1',
     apiKeyEnv: 'AGNTK_FREE_TIER_KEY',
   },
 };

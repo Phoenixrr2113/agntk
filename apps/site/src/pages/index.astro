@@ -1,0 +1,507 @@
+---
+export const prerender = true;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>agntk — Zero-Config AI Agent CLI</title>
+    <meta
+      name="description"
+      content="AI agent you install and point at problems. Zero-config provider resolution, real tools, persistent memory."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --accent: hsl(172, 80%, 44%);
+        --accent-dim: hsl(172, 50%, 12%);
+        --accent-high: hsl(172, 70%, 78%);
+        --bg: hsl(222, 22%, 8%);
+        --bg-card: hsl(220, 18%, 11%);
+        --text: hsl(210, 20%, 96%);
+        --text-dim: hsl(215, 14%, 62%);
+        --border: hsl(215, 10%, 20%);
+        --mono: 'JetBrains Mono', monospace;
+        --sans: 'Inter', system-ui, -apple-system, sans-serif;
+      }
+
+      html {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      /* Nav */
+      nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 1.25rem 2rem;
+      }
+
+      nav .logo {
+        font-weight: 800;
+        font-size: 1.25rem;
+        letter-spacing: -0.03em;
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      nav .logo span {
+        color: var(--accent);
+      }
+
+      nav .links {
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+      }
+
+      nav .links a {
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: color 0.15s;
+      }
+
+      nav .links a:hover {
+        color: var(--text);
+      }
+
+      /* Hero */
+      .hero {
+        max-width: 52rem;
+        margin: 6rem auto 0;
+        padding: 0 2rem;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: clamp(3rem, 6vw + 1rem, 5rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+        background: linear-gradient(
+          135deg,
+          var(--text) 0%,
+          var(--accent-high) 50%,
+          var(--accent) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+      }
+
+      .hero p {
+        font-size: 1.25rem;
+        color: var(--text-dim);
+        max-width: 36rem;
+        margin: 0 auto 2.5rem;
+        line-height: 1.7;
+      }
+
+      .install-block {
+        display: inline-block;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1rem 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .install-block code {
+        font-family: var(--mono);
+        font-size: 1.1rem;
+        color: var(--accent-high);
+      }
+
+      .install-block .prompt {
+        color: var(--text-dim);
+        user-select: none;
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg);
+      }
+
+      .btn-primary:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        border-color: var(--accent);
+        color: var(--accent-high);
+      }
+
+      /* Terminal demo */
+      .terminal {
+        max-width: 44rem;
+        margin: 4rem auto 0;
+        background: hsl(222, 22%, 6%);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        text-align: left;
+      }
+
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        background: hsl(220, 18%, 10%);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .terminal-dot {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        background: var(--border);
+      }
+
+      .terminal-body {
+        padding: 1.25rem 1.5rem;
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        line-height: 1.8;
+        overflow-x: auto;
+      }
+
+      .terminal-body .cmd {
+        color: var(--accent-high);
+      }
+
+      .terminal-body .output {
+        color: var(--text-dim);
+      }
+
+      .terminal-body .highlight {
+        color: var(--accent);
+      }
+
+      /* Features */
+      .features {
+        max-width: 72rem;
+        margin: 6rem auto;
+        padding: 0 2rem;
+      }
+
+      .features h2 {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 3rem;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+        gap: 1.5rem;
+      }
+
+      .feature-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1.75rem;
+        transition: border-color 0.2s;
+      }
+
+      .feature-card:hover {
+        border-color: var(--accent);
+      }
+
+      .feature-card h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.01em;
+      }
+
+      .feature-card p {
+        color: var(--text-dim);
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+
+      .feature-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      /* How it works */
+      .how-it-works {
+        max-width: 52rem;
+        margin: 4rem auto;
+        padding: 0 2rem;
+        text-align: center;
+      }
+
+      .how-it-works h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 1rem;
+      }
+
+      .how-it-works p {
+        color: var(--text-dim);
+        font-size: 1.05rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+      }
+
+      .cascade {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+
+      .cascade-step {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .cascade-arrow {
+        display: flex;
+        align-items: center;
+        color: var(--text-dim);
+        font-size: 1.25rem;
+      }
+
+      /* Footer */
+      footer {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--text-dim);
+        font-size: 0.85rem;
+      }
+
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 640px) {
+        .hero {
+          margin-top: 3rem;
+        }
+        .cascade {
+          flex-direction: column;
+          align-items: center;
+        }
+        .cascade-arrow {
+          transform: rotate(90deg);
+        }
+        footer {
+          flex-direction: column;
+          gap: 1rem;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/" class="logo">agnt<span>k</span></a>
+      <div class="links">
+        <a href="/getting-started/introduction">Docs</a>
+        <a href="/packages/sdk">SDK</a>
+        <a href="https://github.com/Phoenixrr2113/agntk">GitHub</a>
+        <a href="https://www.npmjs.com/package/agntk">npm</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <h1>AI agent you install and point at problems</h1>
+        <p>
+          Zero-config AI agent with real shell access, file I/O, web browsing,
+          and persistent memory. Bring your own key, use local models, or start
+          free.
+        </p>
+        <div class="install-block">
+          <code><span class="prompt">$ </span>npx agntk "fix the failing tests"</code>
+        </div>
+        <div class="hero-actions">
+          <a href="/getting-started/introduction" class="btn btn-primary"
+            >Get Started</a
+          >
+          <a
+            href="https://github.com/Phoenixrr2113/agntk"
+            class="btn btn-secondary">View on GitHub</a
+          >
+        </div>
+      </section>
+
+      <section class="hero">
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="terminal-dot"></div>
+            <div class="terminal-dot"></div>
+            <div class="terminal-dot"></div>
+          </div>
+          <div class="terminal-body">
+            <div><span class="cmd">$ npx agntk "add input validation to the signup form"</span></div>
+            <div>&nbsp;</div>
+            <div><span class="highlight">Provider:</span> <span class="output">openrouter (BYOK)</span></div>
+            <div><span class="highlight">Model:</span> <span class="output">anthropic/claude-sonnet-4</span></div>
+            <div>&nbsp;</div>
+            <div><span class="output">Reading src/components/SignupForm.tsx...</span></div>
+            <div><span class="output">Added email validation with regex pattern</span></div>
+            <div><span class="output">Added password strength requirements</span></div>
+            <div><span class="output">Added inline error messages</span></div>
+            <div><span class="output">Running tests... 14/14 passing</span></div>
+            <div>&nbsp;</div>
+            <div><span class="highlight">Done.</span> <span class="output">Modified 2 files, added 47 lines.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features">
+        <h2>What it does</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">&#x26A1;</div>
+            <h3>Zero-Config Providers</h3>
+            <p>
+              Bring your own API key, run local models with Ollama, or start
+              free — no setup required. agntk auto-detects what's available.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#x1F6E0;</div>
+            <h3>Real Tools</h3>
+            <p>
+              Shell commands, file read/write, glob search, web browsing, and
+              more. The agent works with your actual codebase, not a sandbox.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#x1F9E0;</div>
+            <h3>Named Agents & Memory</h3>
+            <p>
+              Create persistent agents that remember context across sessions.
+              Each agent has its own identity, instructions, and memory store.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#x1F4BB;</div>
+            <h3>Hardware-Aware Local AI</h3>
+            <p>
+              Auto-detects your system — Apple Silicon, NVIDIA GPU, available
+              RAM — and picks the right Ollama model for your hardware.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#x1F310;</div>
+            <h3>HTTP Server & Client</h3>
+            <p>
+              Serve agents over REST, SSE, or WebSocket. Connect remotely with
+              the client SDK. Build agent-powered apps and services.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#x1F4E6;</div>
+            <h3>Modular SDK</h3>
+            <p>
+              Six focused packages — core, CLI, server, client, logger, and the
+              npx wrapper. Use the pieces you need in your own projects.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="how-it-works">
+        <h2>Zero-config provider cascade</h2>
+        <p>
+          agntk checks for API keys, probes for a local Ollama server, and falls
+          back to the free tier — all automatically. You don't configure anything.
+        </p>
+        <div class="cascade">
+          <div class="cascade-step">&#x1F511; BYOK (your API key)</div>
+          <div class="cascade-arrow">&rarr;</div>
+          <div class="cascade-step">&#x1F4BB; Ollama (local)</div>
+          <div class="cascade-arrow">&rarr;</div>
+          <div class="cascade-step">&#x1F193; Free tier (Cerebras)</div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>MIT License &middot; Built by <a href="https://github.com/Phoenixrr2113">Phoenixrr2113</a></span>
+      <span>
+        <a href="/getting-started/introduction">Docs</a> &middot;
+        <a href="https://github.com/Phoenixrr2113/agntk">GitHub</a> &middot;
+        <a href="https://www.npmjs.com/package/agntk">npm</a>
+      </span>
+    </footer>
+  </body>
+</html>

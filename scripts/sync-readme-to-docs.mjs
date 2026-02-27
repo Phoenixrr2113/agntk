@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const README_PATH = join(ROOT, 'README.md');
-const DOCS_DIR = join(ROOT, 'apps/docs/src/content/docs');
+const DOCS_DIR = join(ROOT, 'apps/site/src/content/docs');
 
 // ============================================================================
 // Section-to-page mapping
@@ -29,30 +29,35 @@ const DOCS_DIR = join(ROOT, 'apps/docs/src/content/docs');
  * Sections not listed here are skipped.
  */
 const SECTION_MAP = {
-  'Core: `@agntk/core`': {
-    path: 'packages/sdk.md',
-    title: 'SDK Core',
-    description: 'Core agent factory — tools, roles, config, streaming, durability, hooks, scheduling',
+  'What It Does': {
+    path: 'getting-started/what-it-does.md',
+    title: 'What It Does',
+    description: 'Core capabilities — file I/O, shell access, web browsing, sub-agents, memory',
   },
-  'CLI: `@agntk/cli`': {
+  'Zero-Config Provider Cascade': {
+    path: 'getting-started/providers.md',
+    title: 'Zero-Config Providers',
+    description: 'Automatic provider resolution — BYOK, Ollama, free tier',
+  },
+  'CLI Reference': {
     path: 'packages/cli.md',
-    title: 'CLI',
-    description: 'CLI agent — one-shot prompts, interactive REPL, persistent memory',
+    title: 'CLI Reference',
+    description: 'CLI flags, modes, piped input, REPL, agent management',
   },
-  'Server: `@agntk/server`': {
-    path: 'packages/sdk-server.md',
-    title: 'SDK Server',
-    description: 'Hono HTTP server — REST + SSE + WebSocket endpoints',
+  'Named Agents & Memory': {
+    path: 'getting-started/named-agents.md',
+    title: 'Named Agents & Memory',
+    description: 'Persistent agents with memory across sessions',
   },
-  'Client: `@agntk/client`': {
-    path: 'packages/sdk-client.md',
-    title: 'SDK Client',
-    description: 'Client library — HTTP, SSE streams, WebSocket, session management',
+  'Hardware-Aware Local Inference': {
+    path: 'getting-started/local-inference.md',
+    title: 'Local Inference',
+    description: 'Ollama auto-detection and hardware-aware model selection',
   },
-  'Logger: `@agntk/logger`': {
-    path: 'packages/logger.md',
-    title: 'Logger',
-    description: 'Structured logging — namespace filtering, file/SSE transports, formatters',
+  'For Developers': {
+    path: 'packages/sdk.md',
+    title: 'SDK & Packages',
+    description: 'createAgent() API, custom tools, server, client, model tiers',
   },
 };
 
@@ -167,15 +172,15 @@ function buildIndexPage(readme) {
     '',
     '## Documentation',
     '',
-    '- **[Getting Started](/agntk/getting-started/introduction)** — Introduction and setup',
-    '- **[Installation](/agntk/getting-started/installation)** — Install Agent SDK',
-    '- **[Quick Start](/agntk/getting-started/quick-start)** — Build your first agent',
-    '- **[SDK Core](/agntk/packages/sdk)** — Agents, tools, and configuration',
-    '- **[CLI](/agntk/packages/cli)** — Command-line interface',
-    '- **[SDK Server](/agntk/packages/sdk-server)** — Serve agents over HTTP',
-    '- **[SDK Client](/agntk/packages/sdk-client)** — Connect to a remote agent server',
-    '- **[Logger](/agntk/packages/logger)** — Structured logging',
-    '- **[Configuration](/agntk/configuration/yaml-config)** — Configuration system',
+    '- **[Getting Started](/getting-started/introduction)** — Introduction and setup',
+    '- **[Installation](/getting-started/installation)** — Install Agent SDK',
+    '- **[Quick Start](/getting-started/quick-start)** — Build your first agent',
+    '- **[SDK Core](/packages/sdk)** — Agents, tools, and configuration',
+    '- **[CLI](/packages/cli)** — Command-line interface',
+    '- **[SDK Server](/packages/sdk-server)** — Serve agents over HTTP',
+    '- **[SDK Client](/packages/sdk-client)** — Connect to a remote agent server',
+    '- **[Logger](/packages/logger)** — Structured logging',
+    '- **[Configuration](/configuration/yaml-config)** — Configuration system',
     '',
     '## Requirements',
     '',
@@ -228,9 +233,9 @@ function buildIntroPage(readme) {
     '',
     '## Next Steps',
     '',
-    '- [Installation](/agntk/getting-started/installation) — Set up Agent SDK in your project',
-    '- [Quick Start](/agntk/getting-started/quick-start) — Build your first agent',
-    '- [SDK Core](/agntk/packages/sdk) — Learn about agents, tools, and configuration',
+    '- [Installation](/getting-started/installation) — Set up Agent SDK in your project',
+    '- [Quick Start](/getting-started/quick-start) — Build your first agent',
+    '- [SDK Core](/packages/sdk) — Learn about agents, tools, and configuration',
     '',
   ].join('\n');
 
@@ -245,10 +250,10 @@ function buildQuickStartPage(readme) {
   const sections = parseReadmeSections(readme);
   const quickStart = sections.get('Quick Start') || '';
 
-  // Also grab the first code example from Core section
-  const coreContent = sections.get('Core: `@agntk/core`') || '';
-  const creatingAgent = coreContent.split('### ').find(s => s.startsWith('Creating an Agent'));
-  const streamingSection = coreContent.split('### ').find(s => s.startsWith('Streaming'));
+  // Also grab code examples from For Developers section
+  const devContent = sections.get('For Developers') || '';
+  const creatingAgent = devContent.split('### ').find(s => s.startsWith('Custom Tools'));
+  const streamingSection = null; // No longer a separate streaming section
 
   const content = [
     '---',
@@ -274,9 +279,9 @@ function buildQuickStartPage(readme) {
     '',
     '## Next Steps',
     '',
-    '- [SDK Core](/agntk/packages/sdk) — Full agent configuration reference',
-    '- [CLI](/agntk/packages/cli) — Use agents from the command line',
-    '- [Configuration](/agntk/configuration/yaml-config) — Configuration system',
+    '- [SDK Core](/packages/sdk) — Full agent configuration reference',
+    '- [CLI](/packages/cli) — Use agents from the command line',
+    '- [Configuration](/configuration/yaml-config) — Configuration system',
     '',
   );
 
@@ -292,10 +297,7 @@ function main() {
   const sections = parseReadmeSections(readme);
   let generated = 0;
 
-  // Generate index page
-  const indexContent = buildIndexPage(readme);
-  writeFileSafe(join(DOCS_DIR, 'index.md'), indexContent);
-  generated++;
+  // Landing page is now src/pages/index.astro — skip index.md generation
 
   // Generate introduction page
   const introContent = buildIntroPage(readme);
