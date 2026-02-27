@@ -21,7 +21,7 @@ import { readdirSync, existsSync, writeFileSync, unlinkSync, readFileSync, statS
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
 import { getVersion } from './version.js';
-import { detectApiKey } from './config.js';
+import { detectApiKey, loadDotenvFallback } from './config.js';
 
 // ============================================================================
 // Constants
@@ -238,9 +238,10 @@ function printHelp(): void {
     agntk list
     cat error.log | agntk -n debugger "explain"
 
-  API Key:
-    Save permanently:  mkdir -p ~/.agntk && echo "OPENROUTER_API_KEY=sk-or-..." > ~/.agntk/.env
-    Or per session:    export OPENROUTER_API_KEY=sk-or-...
+  Provider (auto-detected):
+    Works out of the box with the free tier (Cerebras).
+    For your own key:  export OPENROUTER_API_KEY=sk-or-...
+    For local models:  install Ollama (auto-detected at localhost:11434)
 `);
 }
 
@@ -1068,18 +1069,23 @@ async function main(): Promise<void> {
     args.name = 'default';
   }
 
-  // Check API key
-  const apiKeyResult = detectApiKey();
-  if (!apiKeyResult) {
-    console.error(
-      'Error: No API key found.\n\n' +
-        '  1. Get a key at https://openrouter.ai/keys\n' +
-      '  2. Save it permanently:\n\n' +
-      '     mkdir -p ~/.agntk && echo "OPENROUTER_API_KEY=sk-or-..." > ~/.agntk/.env\n\n' +
-      '  Or export for this session only:\n\n' +
-      '     export OPENROUTER_API_KEY=sk-or-...\n',
-    );
-    process.exit(1);
+  // Resolve provider (async cascade: BYOK → Ollama → Free Tier)
+  loadDotenvFallback();
+  const { resolveProvider, setResolvedProvider } = await import('@agntk/core');
+  const resolvedProvider = await resolveProvider();
+  setResolvedProvider(resolvedProvider);
+
+  if (args.outputLevel !== 'quiet') {
+    const providerLabel = resolvedProvider.isFree
+      ? `${resolvedProvider.source} — usage limits apply`
+      : resolvedProvider.source;
+    process.stderr.write(`  provider: ${providerLabel}\n`);
+
+    // Show model recommendation for Ollama users
+    if (resolvedProvider.ollamaModels) {
+      const rec = resolvedProvider.ollamaModels;
+      process.stderr.write(`  models:   ${rec.reason}\n`);
+    }
   }
 
   // Warn if workspace is the home directory (likely unintentional)

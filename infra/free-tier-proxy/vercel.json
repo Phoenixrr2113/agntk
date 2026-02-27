@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/v1/chat/completions", "destination": "/api/v1/chat/completions" }
+  ],
+  "functions": {
+    "api/v1/chat/completions.ts": {
+      "maxDuration": 300
+    }
+  }
+}

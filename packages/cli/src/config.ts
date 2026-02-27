@@ -19,6 +19,7 @@ interface ApiKeyResult {
 const API_KEY_ENV_VARS: Array<{ env: string; provider: string }> = [
   { env: 'OPENROUTER_API_KEY', provider: 'openrouter' },
   { env: 'OPENAI_API_KEY', provider: 'openai' },
+  { env: 'CEREBRAS_API_KEY', provider: 'cerebras' },
 ];
 
 let dotenvFallbackLoaded = false;

@@ -11,7 +11,7 @@ import { z } from 'zod';
 export const ModelTierSchema = z.enum(['fast', 'standard', 'reasoning', 'powerful']);
 export type ModelTier = z.infer<typeof ModelTierSchema>;
 
-export const ProviderSchema = z.enum(['openrouter', 'ollama', 'openai']);
+export const ProviderSchema = z.enum(['openrouter', 'ollama', 'openai', 'cerebras', 'agntk-free']);
 export type Provider = z.infer<typeof ProviderSchema>;
 
 export const CustomProviderSchema = z.object({

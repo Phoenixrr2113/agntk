@@ -19,16 +19,28 @@ export const DEFAULT_MODELS: Record<Provider, Record<ModelTier, string>> = {
     powerful: 'z-ai/glm-4.7',
   },
   ollama: {
-    fast: 'qwen3:4b',
-    standard: 'qwen2.5-coder:14b',
-    reasoning: 'deepseek-r1:14b',
-    powerful: 'qwen2.5-coder:14b',
+    fast: 'qwen3:8b',
+    standard: 'qwen3:14b',
+    reasoning: 'qwen3:14b',
+    powerful: 'qwen3:32b',
   },
   openai: {
     fast: 'gpt-4o-mini',
     standard: 'gpt-4o',
     reasoning: 'o3',
     powerful: 'gpt-4o',
+  },
+  cerebras: {
+    fast: 'llama-4-scout-17b-16e-instruct',
+    standard: 'gpt-oss-120b',
+    reasoning: 'gpt-oss-120b',
+    powerful: 'qwen3-235b',
+  },
+  'agntk-free': {
+    fast: 'gpt-oss-120b',
+    standard: 'gpt-oss-120b',
+    reasoning: 'gpt-oss-120b',
+    powerful: 'gpt-oss-120b',
   },
 };
 

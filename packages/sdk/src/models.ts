@@ -39,6 +39,16 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     baseURL: 'https://api.openai.com/v1',
     apiKeyEnv: 'OPENAI_API_KEY',
   },
+  cerebras: {
+    name: 'cerebras',
+    baseURL: 'https://api.cerebras.ai/v1',
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+  },
+  'agntk-free': {
+    name: 'agntk-free',
+    baseURL: 'https://api.agntk.dev/v1',
+    apiKeyEnv: 'AGNTK_FREE_TIER_KEY',
+  },
 };
 
 // ============================================================================
@@ -71,7 +81,10 @@ function getProvider(providerName: string): ReturnType<typeof createOpenAICompat
     throw new Error(`Unknown provider: ${providerName}. Configure it in models.customProviders.`);
   }
 
-  const apiKey = process.env[providerConfig.apiKeyEnv] || '';
+  // For the free tier proxy, use a static identifier token (proxy holds the real key)
+  const apiKey = providerConfig.name === 'agntk-free'
+    ? 'agntk-free-v1'
+    : (process.env[providerConfig.apiKeyEnv] || '');
 
   log.debug('Initializing provider', { name: providerConfig.name, baseURL: providerConfig.baseURL });
 
@@ -91,7 +104,44 @@ function getProvider(providerName: string): ReturnType<typeof createOpenAICompat
 // ============================================================================
 
 export type ModelTier = 'fast' | 'standard' | 'reasoning' | 'powerful';
-export type ModelProvider = 'openrouter' | 'ollama' | 'openai' | (string & {});
+export type ModelProvider = 'openrouter' | 'ollama' | 'openai' | 'cerebras' | 'agntk-free' | (string & {});
+
+// ============================================================================
+// Resolved Provider (set once at startup by CLI/server)
+// ============================================================================
+
+export interface ResolvedProvider {
+  provider: string;
+  source: string;
+  isFree: boolean;
+  /** Hardware-aware Ollama model recommendations (when provider is 'ollama') */
+  ollamaModels?: {
+    tier: string;
+    fast: string;
+    standard: string;
+    reasoning: string;
+    powerful: string;
+    reason: string;
+  };
+}
+
+let _resolvedProvider: ResolvedProvider | null = null;
+
+/**
+ * Set the resolved provider. Called once by the CLI after running the cascade.
+ * Bridges async resolution to sync model creation functions.
+ */
+export function setResolvedProvider(resolved: ResolvedProvider): void {
+  _resolvedProvider = resolved;
+  log.info('Provider set', { provider: resolved.provider, source: resolved.source });
+}
+
+/**
+ * Get the currently resolved provider, or null if not yet resolved.
+ */
+export function getResolvedProviderState(): ResolvedProvider | null {
+  return _resolvedProvider;
+}
 
 export interface ModelConfig {
   provider: ModelProvider;
@@ -129,13 +179,35 @@ function createModelForProvider(
 // ============================================================================
 
 /**
- * Create a model for a given tier, respecting env overrides and Ollama fallback.
+ * Create a model for a given tier, respecting env overrides, resolved provider, and Ollama fallback.
+ *
+ * For Ollama providers, model selection is hardware-aware:
+ * the provider resolver attaches an ollamaModels recommendation that
+ * maps each tier to the largest model the system can run.
  */
 function createTierModel(tier: ModelTier): LanguageModel {
+  // 1. Use resolved provider if available (new zero-config path)
+  if (_resolvedProvider) {
+    const providerName = _resolvedProvider.provider;
+
+    // For Ollama: check env override → hardware-detected models → static defaults
+    const ollamaRecommended = _resolvedProvider.ollamaModels;
+
+    const modelName = getEnvModel(tier)
+      || (providerName === 'ollama' ? getOllamaEnvModel(tier) : undefined)
+      || (providerName === 'ollama' && ollamaRecommended ? ollamaRecommended[tier] : undefined)
+      || DEFAULT_MODELS[providerName as keyof typeof DEFAULT_MODELS]?.[tier]
+      || DEFAULT_MODELS[DEFAULT_PROVIDER][tier];
+    return createModelForProvider(providerName, modelName);
+  }
+
+  // 2. Legacy path: explicit OLLAMA_ENABLED
   if (process.env['OLLAMA_ENABLED'] === 'true') {
     const modelName = getOllamaEnvModel(tier) || DEFAULT_MODELS.ollama[tier];
     return createModelForProvider('ollama', modelName);
   }
+
+  // 3. Legacy path: default to openrouter
   const modelName = getEnvModel(tier) || DEFAULT_MODELS.openrouter[tier];
   return createModelForProvider('openrouter', modelName);
 }
@@ -184,8 +256,8 @@ export function resolveModel(options: ModelResolutionOptions = {}): LanguageMode
     return createModelForProvider('openrouter', modelName);
   }
 
-  // Use tier-based selection from config
-  const effectiveProvider = provider ?? config.models?.defaultProvider ?? DEFAULT_PROVIDER;
+  // Use tier-based selection from config, falling back to resolved provider
+  const effectiveProvider = provider ?? config.models?.defaultProvider ?? _resolvedProvider?.provider ?? DEFAULT_PROVIDER;
   const effectiveModel = getModelForTier(tier, effectiveProvider);
   log.info('Resolving model (tier-based)', { tier, provider: effectiveProvider, model: effectiveModel });
 

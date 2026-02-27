@@ -23,7 +23,21 @@ export type {
 // Models
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export { resolveModel, models } from './models';
+export { resolveModel, models, setResolvedProvider, getResolvedProviderState } from './models';
+export type { ResolvedProvider } from './models';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Provider Resolution
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export { resolveProvider, getResolvedProvider, resetProviderCache } from './provider-resolver';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// System Detection
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export { detectSystem, recommendOllamaModels, getOllamaModels, hasOllamaModel } from './system-detect';
+export type { SystemProfile, OllamaModelTier, OllamaModelRecommendation } from './system-detect';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Configuration
