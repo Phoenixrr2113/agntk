@@ -1,5 +1,14 @@
 # @agntk/server
 
+## 0.3.3
+
+### Patch Changes
+
+- Sync linked package versions
+- Updated dependencies
+  - @agntk/logger@0.3.3
+  - @agntk/core@0.3.3
+
 ## 0.3.0
 
 ### Patch Changes

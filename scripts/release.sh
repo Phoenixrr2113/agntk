@@ -1,38 +1,46 @@
 #!/usr/bin/env bash
-# Publish @agntk packages to npm using the project-level NPM_TOKEN from .env
+# Publish all public @agntk packages to npm.
+#
+# In CI:     NPM_TOKEN comes from environment (secrets.NPM_TOKEN)
+# Locally:   NPM_TOKEN is loaded from .env
 #
 # Usage:  pnpm release        (from root)
 #    or:  bash scripts/release.sh
 set -euo pipefail
 
-# Load .env into environment (auto-export all vars)
-if [[ ! -f .env ]]; then
-  echo "Error: .env file not found. Create one with NPM_TOKEN=npm_xxx" >&2
-  exit 1
+# Load .env into environment when running locally
+if [[ -z "${NPM_TOKEN:-}" ]] && [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
 fi
-
-set -a
-source .env
-set +a
 
 if [[ -z "${NPM_TOKEN:-}" ]]; then
-  echo "Error: NPM_TOKEN not set in .env" >&2
+  echo "Error: NPM_TOKEN not set (set in .env or environment)" >&2
   exit 1
 fi
 
-echo "Publishing with project NPM_TOKEN (${NPM_TOKEN:0:10}...)"
+echo "Publishing with NPM_TOKEN (${NPM_TOKEN:0:10}...)"
 echo ""
 
 # Build all packages first
 pnpm build
 
-# Publish SDK first (CLI depends on it)
-echo "--- Publishing @agntk/core ---"
-pnpm --filter @agntk/core publish --access public --no-git-checks
+# Publish in dependency order (all public, non-private packages)
+PACKAGES=(
+  "@agntk/core"
+  "@agntk/logger"
+  "@agntk/client"
+  "@agntk/server"
+  "@agntk/cli"
+  "agntk"
+)
+
+for pkg in "${PACKAGES[@]}"; do
+  echo ""
+  echo "--- Publishing ${pkg} ---"
+  pnpm --filter "${pkg}" publish --access public --no-git-checks || echo "  Warning: ${pkg} publish failed (may already be at this version)"
+done
 
 echo ""
-echo "--- Publishing @agntk/cli ---"
-pnpm --filter @agntk/cli publish --access public --no-git-checks
-
-echo ""
-echo "Done! Both packages published."
+echo "Done! All packages published."

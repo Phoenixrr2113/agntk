@@ -1,6 +1,6 @@
 {
   "name": "@agntk/logger",
-  "version": "0.2.0",
+  "version": "0.3.3",
   "type": "module",
   "description": "Zero-dependency debug logging with namespace filtering, file output, and SSE support",
   "main": "./dist/index.js",

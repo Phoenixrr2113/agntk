@@ -2,18 +2,21 @@ pre-commit:
   parallel: true
   jobs:
     - name: eslint
-      glob: "*.{js,ts,jsx,tsx}"
+      glob: '*.{js,ts,jsx,tsx}'
       run: pnpm eslint {staged_files}
 
     - name: typecheck
       run: pnpm typecheck
 
     - name: prettier
-      glob: "*.{js,ts,jsx,tsx,json,md,yml,yaml}"
-      run: prettier --check {staged_files}
+      glob: '*.{js,ts,jsx,tsx,json,md,yml,yaml}'
+      run: npx prettier --check {staged_files}
+
+    - name: test
+      run: pnpm test
 
 commit-msg:
   commands:
     commitlint:
-      glob: ""
+      glob: ''
       run: pnpm commitlint --edit {1}

@@ -1,5 +1,11 @@
 # @agntk/cli
 
+## 0.3.3
+
+### Patch Changes
+
+- @agntk/core@0.3.3
+
 ## 0.3.0
 
 ### Minor Changes

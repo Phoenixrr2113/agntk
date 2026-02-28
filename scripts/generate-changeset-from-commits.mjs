@@ -40,6 +40,8 @@ for (let i = 0; i < args.length; i++) {
 // Package mapping
 const packageMap = {
   'packages/sdk/': '@agntk/core',
+  'packages/cli/': '@agntk/cli',
+  'packages/agntk/': 'agntk',
   'packages/sdk-server/': '@agntk/server',
   'packages/sdk-client/': '@agntk/client',
   'packages/logger/': '@agntk/logger',
@@ -53,7 +55,7 @@ let commits = [];
 try {
   const commitLog = execSync(
     `git log ${baseBranch}..${headBranch} --format=%H%n%s%n%b%n---END---`,
-    { encoding: 'utf-8' }
+    { encoding: 'utf-8' },
   );
 
   const commitBlocks = commitLog.split('---END---').filter(Boolean);
@@ -202,4 +204,3 @@ try {
   console.error('Error writing changeset file:', error.message);
   process.exit(1);
 }
-

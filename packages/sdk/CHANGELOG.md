@@ -1,5 +1,12 @@
 # @agntk/core
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @agntk/logger@0.3.3
+
 ## 0.3.0
 
 ### Minor Changes

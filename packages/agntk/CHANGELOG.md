@@ -1,5 +1,12 @@
 # agntk
 
+## 0.3.3
+
+### Patch Changes
+
+- Sync linked package versions
+  - @agntk/cli@0.3.3
+
 ## 0.3.0
 
 ### Minor Changes
