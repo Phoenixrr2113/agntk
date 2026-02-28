@@ -1,14 +1,18 @@
 /**
  * @fileoverview System hardware detection for automatic Ollama model selection.
  *
- * Detects available RAM/VRAM and selects the largest Qwen3 model the system
- * can comfortably run. Falls back conservatively — better to run a smaller
+ * Detects available RAM/VRAM and selects the best model the system can
+ * comfortably run. Falls back conservatively — better to run a smaller
  * model fast than a larger model that swaps to disk.
  *
- * Memory thresholds (Q4_K_M quantization):
- *   qwen3:8b   ~5-6 GB  → needs ≥8 GB total RAM
- *   qwen3:14b  ~8-10 GB → needs ≥16 GB total RAM
- *   qwen3:32b  ~18-22 GB → needs ≥32 GB total RAM
+ * Supports both local models and Ollama cloud models (-cloud suffix).
+ * Cloud models are always preferred when available since they run on
+ * remote infrastructure regardless of local hardware.
+ *
+ * Memory thresholds (Q4_K_M quantization, local models):
+ *   qwen3:8b         ~5-6 GB  → needs ≥8 GB total RAM
+ *   qwen3-coder:30b  ~17 GB   → needs ≥24 GB total RAM (MoE, fast inference)
+ *   qwen3.5:35b      ~20 GB   → needs ≥32 GB total RAM
  */
 
 import { createLogger } from '@agntk/logger';
@@ -39,13 +43,38 @@ export type OllamaModelTier = 'small' | 'medium' | 'large';
 export interface OllamaModelRecommendation {
   /** Recommended tier */
   tier: OllamaModelTier;
-  /** Model tag to pull/use (e.g. "qwen3:8b") */
+  /** Model tag to pull/use for each agent tier */
   fast: string;
   standard: string;
   reasoning: string;
   powerful: string;
   /** Human-readable reason */
   reason: string;
+  /** True when installed models exist but none are usable (all < 8b, no cloud) */
+  noUsableModels?: boolean;
+}
+
+// ============================================================================
+// Model Classification
+// ============================================================================
+
+/** Cloud models run on remote infrastructure — always usable regardless of local hardware. */
+export function isCloudModel(tag: string): boolean {
+  const lower = tag.toLowerCase();
+  return lower.includes('-cloud') || lower.endsWith(':cloud');
+}
+
+/**
+ * Check if a model is large enough for reliable agent tool-calling.
+ * Models need >= 8b parameters. Cloud models are always usable.
+ * Unknown sizes (e.g. "deepseek-coder:latest") are assumed usable.
+ */
+export function isUsableSize(tag: string): boolean {
+  if (isCloudModel(tag)) return true;
+  // Parse size from tags like "qwen3:14b", "llama3.1:70b", "qwen3-coder:30b"
+  const match = tag.match(/(\d+(?:\.\d+)?)b/i);
+  if (!match) return true; // unknown size → assume usable
+  return parseFloat(match[1]) >= 8;
 }
 
 // ============================================================================
@@ -63,18 +92,37 @@ const MODEL_TIERS: Record<OllamaModelTier, Omit<OllamaModelRecommendation, 'reas
   medium: {
     tier: 'medium',
     fast: 'qwen3:8b',
-    standard: 'qwen3:14b',
-    reasoning: 'qwen3:14b',
-    powerful: 'qwen3:14b',
+    standard: 'qwen3-coder:30b',
+    reasoning: 'qwen3-coder:30b',
+    powerful: 'qwen3-coder:30b',
   },
   large: {
     tier: 'large',
     fast: 'qwen3:8b',
-    standard: 'qwen3:14b',
-    reasoning: 'qwen3:32b',
-    powerful: 'qwen3:32b',
+    standard: 'qwen3-coder:30b',
+    reasoning: 'qwen3.5:35b',
+    powerful: 'qwen3.5:35b',
   },
 };
+
+/**
+ * Preferred models ordered from best to least preferred.
+ * Cloud models first (run on remote infra), then best local models.
+ */
+const MODEL_PREFERENCE = [
+  // Cloud (always top priority)
+  'qwen3-coder:480b-cloud',
+  'qwen3.5:cloud',
+  'qwen3.5:397b-cloud',
+  'gpt-oss:120b-cloud',
+  // Local (newest/best first)
+  'qwen3-coder:30b',
+  'qwen3.5:35b',
+  'qwen3.5:27b',
+  'qwen3:32b',
+  'qwen3:14b',
+  'qwen3:8b',
+];
 
 // ============================================================================
 // System Detection
@@ -86,7 +134,10 @@ const MODEL_TIERS: Record<OllamaModelTier, Omit<OllamaModelRecommendation, 'reas
 function detectAppleSilicon(): boolean {
   if (os.platform() !== 'darwin') return false;
   try {
-    const brand = execSync('sysctl -n machdep.cpu.brand_string', { encoding: 'utf-8' }).trim();
+    const brand = execSync('sysctl -n machdep.cpu.brand_string', {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
     return brand.includes('Apple');
   } catch {
     // Fallback: check arch
@@ -102,7 +153,7 @@ function detectNvidiaVRAM(): number | null {
   try {
     const output = execSync(
       'nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits',
-      { encoding: 'utf-8', timeout: 3000 },
+      { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] },
     ).trim();
     // nvidia-smi returns MB, could have multiple GPUs — take the first
     const mb = parseInt(output.split('\n')[0], 10);
@@ -164,44 +215,128 @@ export function detectSystem(): SystemProfile {
 // ============================================================================
 
 /**
- * Select the best Ollama model tier based on system capabilities.
+ * Select the best Ollama model tier based on system capabilities
+ * and (optionally) which models are actually installed.
  *
- * Thresholds (usable memory for the model weights):
+ * When installedModels is provided, the recommendation is constrained
+ * to models the user already has pulled — the best available model is
+ * used for every tier rather than recommending something that would 404.
+ *
+ * If only sub-8b models are installed (and no cloud models), sets
+ * `noUsableModels: true` so the caller can skip Ollama entirely.
+ *
+ * Hardware thresholds (usable memory for model weights):
  *   < 6 GB  → too small, warn user
  *   6-10 GB → small (qwen3:8b everywhere)
- *   10-18 GB → medium (qwen3:14b for standard+)
- *   18+ GB  → large (qwen3:32b for reasoning/powerful)
+ *   10-20 GB → medium (qwen3-coder:30b for standard+)
+ *   20+ GB  → large (qwen3.5:35b for reasoning/powerful)
  */
-export function recommendOllamaModels(profile?: SystemProfile): OllamaModelRecommendation {
+export function recommendOllamaModels(
+  profile?: SystemProfile,
+  installedModels?: string[],
+): OllamaModelRecommendation {
   const sys = profile || detectSystem();
   const mem = sys.usableForModelsGb;
 
+  // Determine the hardware-ideal tier
+  let ideal: OllamaModelRecommendation;
+
   if (mem < 4) {
     log.warn('Very limited memory for local models', { usableGb: mem });
-    return {
+    ideal = {
       ...MODEL_TIERS.small,
       reason: `Only ${sys.totalRAMGb} GB RAM detected — qwen3:8b may be slow. Consider using the free tier instead.`,
     };
-  }
-
-  if (mem < 10) {
-    return {
+  } else if (mem < 10) {
+    ideal = {
       ...MODEL_TIERS.small,
       reason: `${sys.totalRAMGb} GB RAM → qwen3:8b (best fit for your hardware)`,
     };
-  }
-
-  if (mem < 18) {
-    return {
+  } else if (mem < 20) {
+    ideal = {
       ...MODEL_TIERS.medium,
-      reason: `${sys.totalRAMGb} GB RAM → qwen3:14b for standard tasks, qwen3:8b for fast tasks`,
+      reason: `${sys.totalRAMGb} GB RAM → qwen3-coder:30b for standard tasks, qwen3:8b for fast tasks`,
+    };
+  } else {
+    ideal = {
+      ...MODEL_TIERS.large,
+      reason: `${sys.totalRAMGb} GB RAM → qwen3.5:35b for reasoning/powerful, qwen3-coder:30b for standard`,
     };
   }
 
-  return {
-    ...MODEL_TIERS.large,
-    reason: `${sys.totalRAMGb} GB RAM → qwen3:32b for reasoning/powerful, qwen3:14b for standard`,
+  // If we don't know what's installed, return the hardware-ideal recommendation
+  if (!installedModels || installedModels.length === 0) {
+    return ideal;
+  }
+
+  // Constrain to what's actually pulled — pick the best available model
+  const installed = new Set(installedModels.map((m) => m.toLowerCase()));
+  const bestAvailable = pickBestAvailable(installed);
+
+  if (!bestAvailable) {
+    // No usable models installed (all sub-8b, no cloud)
+    log.info('No usable models installed', { installed: [...installed] });
+    return {
+      ...ideal,
+      noUsableModels: true,
+      reason: 'No usable models found (need 8b+ local or cloud model)',
+    };
+  }
+
+  // Clamp each tier to what's installed.
+  // Cloud models always win over local — they run on remote infrastructure
+  // so they're faster and more capable regardless of local hardware.
+  const bestIsCloud = isCloudModel(bestAvailable);
+  const clamp = (model: string) => {
+    if (bestIsCloud) return bestAvailable;
+    const norm = model.toLowerCase();
+    if (installed.has(norm) || [...installed].some((m) => m.startsWith(norm))) {
+      return model;
+    }
+    return bestAvailable;
   };
+
+  const result = {
+    tier: ideal.tier,
+    fast: clamp(ideal.fast),
+    standard: clamp(ideal.standard),
+    reasoning: clamp(ideal.reasoning),
+    powerful: clamp(ideal.powerful),
+    reason: '',
+  };
+
+  // Build reason showing what standard tier will actually use
+  const unique = [...new Set([result.fast, result.standard, result.reasoning, result.powerful])];
+  result.reason = `${sys.totalRAMGb} GB RAM → ${unique.join(', ')}`;
+
+  return result;
+}
+
+/**
+ * Pick the best usable model from what's installed.
+ *
+ * Priority:
+ * 1. Preferred models in order (cloud first, then best local)
+ * 2. Any other installed model that passes isUsableSize()
+ * 3. null if nothing qualifies
+ */
+function pickBestAvailable(installed: Set<string>): string | null {
+  // Check preferred models in order
+  for (const model of MODEL_PREFERENCE) {
+    if (installed.has(model) || [...installed].some((m) => m.startsWith(model))) {
+      return model;
+    }
+  }
+
+  // Check for any other usable model (non-qwen, non-preferred but >= 8b or cloud)
+  for (const model of installed) {
+    if (isUsableSize(model)) {
+      return model;
+    }
+  }
+
+  // Nothing qualifies
+  return null;
 }
 
 // ============================================================================
@@ -212,7 +347,8 @@ export function recommendOllamaModels(profile?: SystemProfile): OllamaModelRecom
  * Check which models Ollama already has pulled.
  */
 export async function getOllamaModels(baseUrl?: string): Promise<string[]> {
-  const url = baseUrl || process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
+  const rawUrl = baseUrl || process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
+  const url = rawUrl.replace(/\/(api|v1)\/?$/, '');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 2000);
 

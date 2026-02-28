@@ -25,6 +25,10 @@ export interface ResolvedProvider {
   isFree: boolean;
   /** When provider is 'ollama', hardware-aware model recommendations */
   ollamaModels?: OllamaModelRecommendation;
+  /** When provider is 'ollama', the list of models actually installed */
+  ollamaInstalledModels?: string[];
+  /** When Ollama was skipped despite running, explains why (for CLI display) */
+  ollamaSkipReason?: string;
 }
 
 // ============================================================================
@@ -49,6 +53,12 @@ function checkBYOK(): ResolvedProvider | null {
 }
 
 // ============================================================================
+// Ollama Skip Reason (set by probeOllama, read by getFreeTier)
+// ============================================================================
+
+let _ollamaSkipReason: string | null = null;
+
+// ============================================================================
 // Ollama Detection
 // ============================================================================
 
@@ -68,11 +78,16 @@ function checkOllamaExplicit(): ResolvedProvider | null {
 
 /**
  * Probe Ollama at localhost:11434 with a fast health check.
- * If Ollama is running, detect system hardware and recommend models.
+ * If Ollama is running AND has at least one model pulled, detect system
+ * hardware and recommend the best available models.
  * Returns within 500ms regardless of whether Ollama is running.
  */
 async function probeOllama(): Promise<ResolvedProvider | null> {
-  const baseUrl = process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
+  // Strip trailing path segments (/api, /v1, etc.) — the probe needs the raw Ollama host.
+  // Users may set OLLAMA_BASE_URL to "http://localhost:11434/api" or "/v1" for the AI SDK,
+  // but the native Ollama API lives at the root (e.g. /api/tags, not /api/api/tags).
+  const rawUrl = process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
+  const baseUrl = rawUrl.replace(/\/(api|v1)\/?$/, '');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 500);
 
@@ -83,19 +98,45 @@ async function probeOllama(): Promise<ResolvedProvider | null> {
     });
     clearTimeout(timeout);
 
-    if (response.ok) {
-      // Ollama is running — detect hardware and pick best model tier
-      const sysProfile = detectSystem();
-      const models = recommendOllamaModels(sysProfile);
-      log.info('Ollama detected', { baseUrl, tier: models.tier, reason: models.reason });
-      return {
-        provider: 'ollama',
-        source: `ollama (${baseUrl})`,
-        isFree: false,
-        ollamaModels: models,
-      };
+    if (!response.ok) return null;
+
+    // Parse which models are actually installed
+    const data = (await response.json()) as { models?: Array<{ name: string }> };
+    const installedModels = (data.models || []).map((m) => m.name.toLowerCase());
+
+    if (installedModels.length === 0) {
+      log.info('Ollama running but no models installed', { baseUrl });
+      return null;
     }
-    return null;
+
+    // Detect hardware and recommend the best model from what's actually installed
+    const sysProfile = detectSystem();
+    const recommendation = recommendOllamaModels(sysProfile, installedModels);
+
+    // If no usable models found (all sub-8b, no cloud), skip Ollama
+    if (recommendation.noUsableModels) {
+      _ollamaSkipReason =
+        'Ollama running but no 8b+ model found.\n' +
+        '        Run `ollama pull qwen3-coder:30b` for local, or `ollama pull qwen3-coder:480b-cloud` for cloud.\n' +
+        '        Using free tier for now.';
+      log.info('Ollama skipped — no usable models', { baseUrl, installed: installedModels });
+      return null;
+    }
+
+    log.info('Ollama detected', {
+      baseUrl,
+      tier: recommendation.tier,
+      standard: recommendation.standard,
+      installed: installedModels,
+      reason: recommendation.reason,
+    });
+    return {
+      provider: 'ollama',
+      source: `ollama (${baseUrl})`,
+      isFree: false,
+      ollamaModels: recommendation,
+      ollamaInstalledModels: installedModels,
+    };
   } catch {
     clearTimeout(timeout);
     log.debug('Ollama not available', { baseUrl });
@@ -109,7 +150,11 @@ async function probeOllama(): Promise<ResolvedProvider | null> {
 
 function getFreeTier(): ResolvedProvider {
   log.info('Using agntk free tier');
-  return { provider: 'agntk-free', source: 'free tier (Cerebras)', isFree: true };
+  const result: ResolvedProvider = { provider: 'agntk-free', source: 'free tier (Cerebras)', isFree: true };
+  if (_ollamaSkipReason) {
+    result.ollamaSkipReason = _ollamaSkipReason;
+  }
+  return result;
 }
 
 // ============================================================================
@@ -126,6 +171,8 @@ function getFreeTier(): ResolvedProvider {
  * 4. Free tier fallback (sync, instant)
  */
 export async function resolveProvider(): Promise<ResolvedProvider> {
+  _ollamaSkipReason = null;
+
   // 1. BYOK — instant
   const byok = checkBYOK();
   if (byok) return byok;

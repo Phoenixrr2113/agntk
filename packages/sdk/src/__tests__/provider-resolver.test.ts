@@ -94,14 +94,100 @@ describe('resolveProvider', () => {
       expect(result.isFree).toBe(false);
     });
 
-    it('detects Ollama via probe when running', async () => {
+    it('detects Ollama via probe when running with usable models', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [] }), { status: 200 }),
+        new Response(JSON.stringify({ models: [
+          { name: 'qwen3:8b' },
+          { name: 'qwen3:14b' },
+          { name: 'qwen3:32b' },
+        ] }), { status: 200 }),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
       expect(result.source).toContain('ollama');
       expect(result.isFree).toBe(false);
+    });
+
+    it('skips Ollama when running but no models installed', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('agntk-free');
+    });
+
+    it('skips Ollama when only sub-8b models installed', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'qwen3:0.6b' },
+          { name: 'qwen3:1.7b' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('agntk-free');
+      expect(result.ollamaSkipReason).toBeTruthy();
+      expect(result.ollamaSkipReason).toContain('8b+');
+    });
+
+    it('uses cloud model when available alongside tiny local', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'qwen3:0.6b' },
+          { name: 'qwen3-coder:480b-cloud' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('ollama');
+      expect(result.ollamaModels).toBeTruthy();
+    });
+
+    it('prefers cloud over small local models', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'qwen3:1.7b' },
+          { name: 'gpt-oss:120b-cloud' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('ollama');
+      expect(result.isFree).toBe(false);
+    });
+
+    it('uses local 8b+ model when no cloud available', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'qwen3:8b' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('ollama');
+    });
+
+    it('accepts non-qwen model >= 8b', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'llama3.1:70b' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('ollama');
+    });
+
+    it('accepts model with unknown size (assumes usable)', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ models: [
+          { name: 'deepseek-coder:latest' },
+        ] }), { status: 200 }),
+      );
+      const result = await resolveProvider();
+      expect(result.provider).toBe('ollama');
+    });
+
+    it('does not attach skip reason when Ollama is not running', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'));
+      const result = await resolveProvider();
+      expect(result.provider).toBe('agntk-free');
+      expect(result.ollamaSkipReason).toBeUndefined();
     });
 
     it('BYOK takes priority over Ollama', async () => {

@@ -20,9 +20,9 @@ export const DEFAULT_MODELS: Record<Provider, Record<ModelTier, string>> = {
   },
   ollama: {
     fast: 'qwen3:8b',
-    standard: 'qwen3:14b',
-    reasoning: 'qwen3:14b',
-    powerful: 'qwen3:32b',
+    standard: 'qwen3-coder:30b',
+    reasoning: 'qwen3-coder:30b',
+    powerful: 'qwen3.5:35b',
   },
   openai: {
     fast: 'gpt-4o-mini',
