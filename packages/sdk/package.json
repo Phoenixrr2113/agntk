@@ -1,6 +1,6 @@
 {
   "name": "@agntk/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "description": "Opinionated agent SDK extending AI SDK's ToolLoopAgent",
   "main": "./dist/index.js",
