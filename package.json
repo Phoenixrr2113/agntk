@@ -56,10 +56,5 @@
     "node": ">=20.0.0"
   },
   "packageManager": "pnpm@9.0.0",
-  "dependencies": {
-    "@opentelemetry/sdk-trace-node": "^2.5.1",
-    "dotenv": "^17.2.3",
-    "langfuse-vercel": "^3.38.6",
-    "yaml": "^2.8.2"
-  }
+  "dependencies": {}
 }

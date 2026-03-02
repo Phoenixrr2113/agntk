@@ -28,7 +28,12 @@ import { resolveModel } from './models';
 import { createToolPreset } from './presets/tools';
 import { createSpawnAgentTool } from './tools/spawn-agent';
 import { wrapAllToolsWithRetry } from './tools/model-retry';
-import { discoverSkills, filterEligibleSkills, buildSkillsSystemPrompt, loadSkillContent } from './skills';
+import {
+  discoverSkills,
+  filterEligibleSkills,
+  buildSkillsSystemPrompt,
+  loadSkillContent,
+} from './skills';
 import { checkWorkflowAvailability } from './workflow/utils';
 import { wrapToolsAsDurable } from './workflow/durable-tool';
 import { createReflectionPrepareStep } from './reflection';
@@ -55,7 +60,8 @@ const log = createLogger('@agntk/core:agent');
 const DEFAULT_MAX_STEPS = 25;
 const SUB_AGENT_MAX_STEPS = 15;
 const DEFAULT_MAX_SPAWN_DEPTH = 2;
-const AGENT_STATE_BASE = '.agntk/agents';
+/** Relative path (from homedir) to the agents state directory. */
+export const AGENT_STATE_BASE = '.agntk/agents';
 
 // ============================================================================
 // Helpers
@@ -65,7 +71,7 @@ const AGENT_STATE_BASE = '.agntk/agents';
  * Resolve the persistent state directory for a named agent.
  * ~/.agntk/agents/{name}/
  */
-function resolveAgentStatePath(name: string): string {
+export function resolveAgentStatePath(name: string): string {
   const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return resolve(homedir(), AGENT_STATE_BASE, safeName);
 }
@@ -74,10 +80,7 @@ function resolveAgentStatePath(name: string): string {
  * Detect if telemetry should be enabled from env vars.
  */
 function detectTelemetry(): boolean {
-  return !!(
-    process.env.LANGFUSE_PUBLIC_KEY &&
-    process.env.LANGFUSE_SECRET_KEY
-  );
+  return !!(process.env.LANGFUSE_PUBLIC_KEY && process.env.LANGFUSE_SECRET_KEY);
 }
 
 /**
@@ -100,13 +103,13 @@ function buildBaseInstructions(
   parts.push('');
   parts.push(
     'You have access to a full suite of tools including file operations, ' +
-    'shell commands, code search (grep, glob, ast-grep), a browser, ' +
-    'deep reasoning, planning, and persistent memory. ' +
-    'You can spawn sub-agents for complex tasks that benefit from delegation. ' +
-    'Use the remember tool to persist important findings across sessions. ' +
-    'Use the recall tool to search your memory for relevant context. ' +
-    'If the user\'s request is vague or conversational (e.g., greetings, ' +
-    '"whats up", "hello"), respond conversationally without using tools.',
+      'shell commands, code search (grep, glob, ast-grep), a browser, ' +
+      'deep reasoning, planning, and persistent memory. ' +
+      'You can spawn sub-agents for complex tasks that benefit from delegation. ' +
+      'Use the remember tool to persist important findings across sessions. ' +
+      'Use the recall tool to search your memory for relevant context. ' +
+      "If the user's request is vague or conversational (e.g., greetings, " +
+      '"whats up", "hello"), respond conversationally without using tools.',
   );
 
   if (skillsPrompt) {
@@ -147,11 +150,7 @@ export interface InternalOptions {
  * ```
  */
 export function createAgent(options: AgentOptions, _internal: InternalOptions = {}): Agent {
-  const {
-    name,
-    instructions,
-    workspaceRoot = process.cwd(),
-  } = options;
+  const { name, instructions, workspaceRoot = process.cwd() } = options;
 
   const spawnDepth = _internal._spawnDepth ?? 0;
   const isSubAgent = spawnDepth > 0;
@@ -247,9 +246,9 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
   let augmentedSystemPrompt = buildBaseInstructions(name, instructions, skillsPrompt);
 
   // ── 8. Stop conditions ────────────────────────────────────────────────
-  const stopConditions: Array<(opts: { steps: Array<import('ai').StepResult<ToolSet>> }) => PromiseLike<boolean> | boolean> = [
-    stepCountIs(maxSteps),
-  ];
+  const stopConditions: Array<
+    (opts: { steps: Array<import('ai').StepResult<ToolSet>> }) => PromiseLike<boolean> | boolean
+  > = [stepCountIs(maxSteps)];
 
   if (options.usageLimits) {
     stopConditions.push(usageLimitStop(options.usageLimits));
@@ -269,7 +268,9 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
   const approvalConfig = resolveApprovalConfig(options.approval);
   if (approvalConfig) {
     tools = applyApproval(tools, approvalConfig) as ToolSet;
-    log.info('Approval system enabled', { tools: approvalConfig.tools ?? 'default dangerous tools' });
+    log.info('Approval system enabled', {
+      tools: approvalConfig.tools ?? 'default dangerous tools',
+    });
   }
 
   // ── 12. Telemetry — auto-detect ──────────────────────────────────────
@@ -286,7 +287,9 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
     stopWhen: stopConditions,
     prepareCall: (opts) => ({ ...opts, instructions: augmentedSystemPrompt }),
     prepareStep,
-    ...(telemetrySettings ? { experimental_telemetry: telemetrySettings as AiTelemetrySettings } : {}),
+    ...(telemetrySettings
+      ? { experimental_telemetry: telemetrySettings as AiTelemetrySettings }
+      : {}),
   });
 
   log.debug('ToolLoopAgent created', {

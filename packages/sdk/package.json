@@ -32,7 +32,7 @@
     "@agntk/logger": "workspace:*",
     "@ai-sdk/openai-compatible": "^2.0.28",
     "ai": "6.0.77",
-    "xstate": "^5.26.0",
+    "yaml": "^2.8.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

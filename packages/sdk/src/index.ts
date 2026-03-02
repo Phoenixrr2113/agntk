@@ -11,13 +11,9 @@
 // Core — the essentials
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export { createAgent } from './agent';
+export { createAgent, AGENT_STATE_BASE, resolveAgentStatePath } from './agent';
 
-export type {
-  AgentOptions,
-  Agent,
-  AgentStreamResult,
-} from './types/agent';
+export type { AgentOptions, Agent, AgentStreamResult } from './types/agent';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Models
@@ -36,7 +32,12 @@ export { resolveProvider, getResolvedProvider, resetProviderCache } from './prov
 // System Detection
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export { detectSystem, recommendOllamaModels, getOllamaModels, hasOllamaModel } from './system-detect';
+export {
+  detectSystem,
+  recommendOllamaModels,
+  getOllamaModels,
+  hasOllamaModel,
+} from './system-detect';
 export type { SystemProfile, OllamaModelTier, OllamaModelRecommendation } from './system-detect';
 
 // ═══════════════════════════════════════════════════════════════════════════════

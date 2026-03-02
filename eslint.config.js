@@ -1,1 +1,1 @@
-export { default } from '@agent/config-eslint';
+export { default } from '@agntk/config-eslint';
