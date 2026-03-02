@@ -1,5 +1,13 @@
 # @agntk/core
 
+## 0.3.5
+
+### Patch Changes
+
+- Auto-generated changeset from conventional commits:
+  - **@agntk/cli** (patch): refactor: decompose CLI monolith, remove dead code, fix deps
+  - **@agntk/core** (patch): refactor: decompose CLI monolith, remove dead code, fix deps
+
 ## 0.3.3
 
 ### Patch Changes
