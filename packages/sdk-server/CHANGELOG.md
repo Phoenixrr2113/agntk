@@ -1,5 +1,12 @@
 # @agntk/server
 
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @agntk/core@0.3.5
+
 ## 0.3.3
 
 ### Patch Changes
