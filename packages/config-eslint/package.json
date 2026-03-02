@@ -9,11 +9,11 @@
     "*.js"
   ],
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jsdoc": "^62.5.4"
+    "eslint-plugin-jsdoc": "^62.7.1"
   },
   "peerDependencies": {
     "eslint": "^9.0.0",
