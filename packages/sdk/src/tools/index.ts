@@ -1,10 +1,3 @@
-/**
- * @agntk/core - Tools Module
- *
- * Central export for tool factory, provider, and utilities.
- */
-
-// Glob Tool
 export {
   globTool,
   createGlobTool,
@@ -15,7 +8,6 @@ export {
   type FileMatch,
 } from './glob';
 
-// Grep Tool
 export {
   grepTool,
   createGrepTool,
@@ -30,7 +22,6 @@ export {
   type CountResult,
 } from './grep';
 
-// AST-Grep Tool
 export {
   astGrepSearchTool,
   astGrepReplaceTool,
@@ -45,7 +36,6 @@ export {
   type SearchMatch,
 } from './ast-grep';
 
-// Shell Tool
 export {
   createShellTool,
   shellTool,
@@ -59,9 +49,12 @@ export {
   INTERACTIVE_COMMANDS,
   type ShellInput,
   type ShellResult,
+  createBackgroundTool,
+  clearBackgroundSessions,
+  getBackgroundSessions,
+  type BackgroundSession,
 } from './shell';
 
-// Plan Tool
 export {
   createPlanTool,
   createValidationTool,
@@ -82,7 +75,6 @@ export {
   type ValidationResult,
 } from './plan';
 
-// Deep Reasoning Tool
 export {
   createDeepReasoningTool,
   DeepReasoningEngine,
@@ -100,34 +92,56 @@ export {
   type DeepReasoningInput,
 } from './deep-reasoning';
 
-// File Tools
 export {
   createFileReadTool,
   createFileWriteTool,
   createFileEditTool,
   createFileCreateTool,
   createFileTools,
+  type FileToolOptions,
 } from './file';
 
-// Spawn Agent Tool
-export { createSpawnAgentTool } from './spawn-agent';
-
-// Model Retry
 export {
-  ModelRetry,
-  wrapToolWithRetry,
-  wrapAllToolsWithRetry,
-} from './model-retry';
+  createSpawnAgentTool,
+  generateAgentId,
+  spawnAgentParametersSchema,
+  type SpawnAgentOptions,
+  type SpawnAgentInput,
+  type SpawnAgentResult,
+  type SpawnAgentSyncResult,
+  type SpawnAgentAsyncResult,
+  type SubAgentStreamData,
+} from './spawn-agent';
 
-// Search Skills Tool
-export { createSearchSkillsTool, clearSkillsCache, type SearchSkillsToolConfig } from './search-skills';
+export {
+  createCheckAgentTool,
+  checkAgentParametersSchema,
+  type CheckAgentOptions,
+  type CheckAgentResult,
+  type CheckAgentEntry,
+  type CheckAgentInput,
+} from './spawn-agent/check-agent';
 
-// Memory Tools
-export { createMemoryTools, type MemoryToolsOptions } from '../memory/tools';
+export {
+  AgentRegistry,
+  type AgentRegistryEntry,
+  type AgentStatus,
+  type SpawnErrorType,
+} from './spawn-agent/registry';
+
+export { ModelRetry, wrapToolWithRetry, wrapAllToolsWithRetry } from './model-retry';
+
+export { wrapAllToolsWithWorkspace, type WorkspaceMiddlewareOptions } from './workspace-middleware';
+
+export {
+  createSearchSkillsTool,
+  clearSkillsCache,
+  type SearchSkillsToolConfig,
+} from './search-skills';
+
 export type { MemoryStore, MemoryConfig } from '../memory/types';
 export { MarkdownMemoryStore } from '../memory/store';
 
-// Browser Tool
 export {
   createBrowserTool,
   browserTool,
@@ -143,3 +157,11 @@ export {
   type BrowserResult,
   type BrowserConfig,
 } from './browser';
+
+export {
+  createWebSearchTool,
+  webSearchTool,
+  webSearchInputSchema,
+  WEB_SEARCH_DESCRIPTION,
+  type WebSearchInput,
+} from './web-search';

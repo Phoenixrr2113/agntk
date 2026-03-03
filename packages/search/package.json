@@ -1,0 +1,68 @@
+{
+  "name": "@agntk/search",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Multi-provider web search with fallback chain for AI agents",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js",
+      "default": "./dist/providers/index.js"
+    },
+    "./extract": {
+      "types": "./dist/extract.d.ts",
+      "import": "./dist/extract.js",
+      "default": "./dist/extract.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && node ../../scripts/fix-esm-imports.mjs ./dist",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@agntk/logger": "workspace:*",
+    "cheerio": "^1.0.0",
+    "duck-duck-scrape": "^2.2.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@agntk/config-typescript": "workspace:*",
+    "@types/node": "^20.17.19",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.3"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agntk/agntk.git",
+    "directory": "packages/search"
+  },
+  "homepage": "https://github.com/agntk/agntk#readme",
+  "bugs": {
+    "url": "https://github.com/agntk/agntk/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "web-search",
+    "ai-agent",
+    "duckduckgo",
+    "searxng",
+    "tavily"
+  ],
+  "license": "MIT"
+}

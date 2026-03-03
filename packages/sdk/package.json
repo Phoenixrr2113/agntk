@@ -1,6 +1,6 @@
 {
   "name": "@agntk/core",
-  "version": "0.3.5",
+  "version": "1.0.0",
   "type": "module",
   "description": "Opinionated agent SDK extending AI SDK's ToolLoopAgent",
   "main": "./dist/index.js",
@@ -20,6 +20,11 @@
       "types": "./dist/advanced/index.d.ts",
       "import": "./dist/advanced/index.js",
       "default": "./dist/advanced/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js",
+      "default": "./dist/tools/index.js"
     }
   },
   "scripts": {
@@ -30,6 +35,7 @@
   },
   "dependencies": {
     "@agntk/logger": "workspace:*",
+    "@agntk/search": "workspace:*",
     "@ai-sdk/openai-compatible": "^2.0.31",
     "ai": "6.0.105",
     "yaml": "^2.8.2",

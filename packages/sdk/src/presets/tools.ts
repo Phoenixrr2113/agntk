@@ -1,8 +1,8 @@
 /**
- * @fileoverview Tool presets for different agent configurations.
- * Provides none, minimal, standard, and full tool sets.
+ * @fileoverview Tool preset definitions for the SDK.
+ * Provides factories and configurations for grouping tools into functional sets
+ * such as 'minimal', 'standard', and 'full'.
  */
-
 import { createGlobTool } from '../tools/glob';
 import { createGrepTool } from '../tools/grep';
 import { createAstGrepTools } from '../tools/ast-grep';
@@ -10,41 +10,25 @@ import { createShellTool, createBackgroundTool } from '../tools/shell';
 import { createPlanTool, type PlanToolConfig } from '../tools/plan';
 import { createDeepReasoningTool } from '../tools/deep-reasoning';
 import { createBrowserTool } from '../tools/browser';
-import { createFileTools } from '../tools/file';
+import { createFileTools, type FileToolOptions } from '../tools/file';
 import { createProgressTools } from '../tools/progress';
 import { createSearchSkillsTool } from '../tools/search-skills';
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════════════════════
+import { createWebSearchTool } from '../tools/web-search';
 
 export type ToolPresetLevel = 'none' | 'minimal' | 'standard' | 'full';
 
 export interface ToolPresetOptions {
-  /** Override default workspace root */
   workspaceRoot?: string;
-  /** Plan tool config */
+
   planConfig?: PlanToolConfig;
-  /** Additional custom tools to include */
+
   customTools?: Record<string, unknown>;
+
+  fileOptions?: FileToolOptions;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Preset Definitions
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Create tool presets based on the selected level.
- */
-export function createToolPreset(
-  preset: ToolPresetLevel,
-  options: ToolPresetOptions = {}
-) {
-  const {
-    workspaceRoot = process.cwd(),
-    planConfig,
-    customTools = {},
-  } = options;
+export function createToolPreset(preset: ToolPresetLevel, options: ToolPresetOptions = {}) {
+  const { workspaceRoot = process.cwd(), planConfig, customTools = {}, fileOptions } = options;
 
   switch (preset) {
     case 'none':
@@ -58,13 +42,13 @@ export function createToolPreset(
 
     case 'standard':
       return {
-        ...createStandardPreset(workspaceRoot, planConfig),
+        ...createStandardPreset(workspaceRoot, planConfig, fileOptions),
         ...customTools,
       };
 
     case 'full':
       return {
-        ...createFullPreset(workspaceRoot, planConfig),
+        ...createFullPreset(workspaceRoot, planConfig, fileOptions),
         ...customTools,
       };
 
@@ -73,23 +57,15 @@ export function createToolPreset(
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Preset Implementations
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Minimal preset: Glob for file search.
- * Good for pure analysis tasks without mutations.
- */
 function createMinimalPreset() {
   return createGlobTool();
 }
 
-/**
- * Standard preset: Glob, grep, shell, plan, deep_reasoning.
- * Good for most development tasks.
- */
-function createStandardPreset(workspaceRoot: string, planConfig?: PlanToolConfig) {
+function createStandardPreset(
+  workspaceRoot: string,
+  planConfig?: PlanToolConfig,
+  fileOptions?: FileToolOptions,
+) {
   const shell = createShellTool(workspaceRoot);
   const plan = createPlanTool(planConfig ?? {});
   const deep_reasoning = createDeepReasoningTool();
@@ -97,8 +73,9 @@ function createStandardPreset(workspaceRoot: string, planConfig?: PlanToolConfig
   return {
     ...createGlobTool(),
     ...createGrepTool(),
-    ...createFileTools(workspaceRoot),
+    ...createFileTools(workspaceRoot, fileOptions),
     ...createSearchSkillsTool(),
+    ...createWebSearchTool(),
     shell,
     background: createBackgroundTool(),
     plan,
@@ -106,27 +83,19 @@ function createStandardPreset(workspaceRoot: string, planConfig?: PlanToolConfig
   };
 }
 
-/**
- * Full preset: All standard tools + AST-grep, progress tracking, and browser.
- * Good for complex, multi-agent tasks.
- */
-function createFullPreset(workspaceRoot: string, planConfig?: PlanToolConfig) {
+function createFullPreset(
+  workspaceRoot: string,
+  planConfig?: PlanToolConfig,
+  fileOptions?: FileToolOptions,
+) {
   return {
-    ...createStandardPreset(workspaceRoot, planConfig),
+    ...createStandardPreset(workspaceRoot, planConfig, fileOptions),
     ...createAstGrepTools(),
     ...createProgressTools(workspaceRoot),
     browser: createBrowserTool(),
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Static Presets (for quick reference)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Static preset definitions for reference.
- * Use createToolPreset() for actual tool creation.
- */
 export const toolPresets = {
   none: {} as Record<string, never>,
 
@@ -136,12 +105,44 @@ export const toolPresets = {
   },
 
   standard: {
-    description: 'Glob, grep, shell, background, file tools, search_skills, plan, deep_reasoning',
-    tools: ['glob', 'grep', 'shell', 'background', 'file_read', 'file_write', 'file_edit', 'file_create', 'search_skills', 'plan', 'deep_reasoning'],
+    description:
+      'Glob, grep, shell, background, file tools, search_skills, web_search, plan, deep_reasoning',
+    tools: [
+      'glob',
+      'grep',
+      'shell',
+      'background',
+      'file_read',
+      'file_write',
+      'file_edit',
+      'file_create',
+      'search_skills',
+      'web_search',
+      'plan',
+      'deep_reasoning',
+    ],
   },
 
   full: {
     description: 'All standard tools plus AST-grep, progress tracking, and browser automation',
-    tools: ['glob', 'grep', 'shell', 'background', 'file_read', 'file_write', 'file_edit', 'file_create', 'progress_read', 'progress_update', 'search_skills', 'plan', 'deep_reasoning', 'ast_grep_search', 'ast_grep_replace', 'browser'],
+    tools: [
+      'glob',
+      'grep',
+      'shell',
+      'background',
+      'file_read',
+      'file_write',
+      'file_edit',
+      'file_create',
+      'progress_read',
+      'progress_update',
+      'search_skills',
+      'web_search',
+      'plan',
+      'deep_reasoning',
+      'ast_grep_search',
+      'ast_grep_replace',
+      'browser',
+    ],
   },
 } as const;
