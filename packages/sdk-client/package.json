@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@agntk/logger": "workspace:*",
-    "ai": "6.0.105"
+    "ai": "6.0.107"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
