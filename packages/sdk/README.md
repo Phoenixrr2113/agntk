@@ -65,14 +65,13 @@ interface AgentStreamResult {
 
 ## Built-in Tools
 
-Every agent comes with 20 built-in tools:
+Every agent comes with 18 built-in tools:
 
 | Category       | Tools                                                                 |
 | -------------- | --------------------------------------------------------------------- |
 | **Files**      | `file_read`, `file_write`, `file_edit`, `file_create`, `glob`, `grep` |
 | **Code**       | `ast_grep_search`, `ast_grep_replace`                                 |
 | **Shell**      | `shell`, `background`                                                 |
-| **Planning**   | `plan`, `deep_reasoning`                                              |
 | **Memory**     | `remember`, `recall`, `update_context`, `forget`                      |
 | **Sub-Agents** | `spawn_agent`                                                         |
 | **Skills**     | `search_skills`                                                       |
