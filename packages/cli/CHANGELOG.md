@@ -1,5 +1,16 @@
 # @agntk/cli
 
+## 1.1.0
+
+### Minor Changes
+
+- Add conversational follow-up mode and live sub-agent activity streaming
+
+### Patch Changes
+
+- Updated dependencies
+  - @agntk/core@1.1.0
+
 ## 0.3.5
 
 ### Patch Changes
