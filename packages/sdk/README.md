@@ -36,7 +36,7 @@ const text = await result.text;
 interface Agent {
   readonly name: string;
 
-  init(): Promise<void>;              // Called automatically by stream()
+  init(): Promise<void>; // Called automatically by stream()
   stream(input: { prompt: string }): Promise<AgentStreamResult>;
 
   getSystemPrompt(): string;
@@ -44,44 +44,45 @@ interface Agent {
 }
 
 interface AgentStreamResult {
-  fullStream: AsyncIterable<StreamChunk>;   // All event types
-  text: PromiseLike<string>;                // Final accumulated text
-  usage: PromiseLike<LanguageModelUsage>;   // Token usage
+  fullStream: AsyncIterable<StreamChunk>; // All event types
+  text: PromiseLike<string>; // Final accumulated text
+  usage: PromiseLike<LanguageModelUsage>; // Token usage
 }
 ```
 
 ## `createAgent(options)`
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `name` | `string` | **required** | Display name — used in logs, traces, and persistent memory |
-| `instructions` | `string` | None | Natural language context injected as the system prompt |
-| `workspaceRoot` | `string` | `process.cwd()` | Root for file operations |
-| `maxSteps` | `number` | `25` | Max tool-loop iterations |
-| `model` | `LanguageModel` | Auto-resolved | AI SDK model instance (optional override) |
-| `usageLimits` | `UsageLimits` | None | Token and request caps |
-| `tools` | `Record<string, Tool>` | `{}` | Custom tools (merged with built-in tools) |
+| Option               | Type                      | Default         | Description                                                |
+| -------------------- | ------------------------- | --------------- | ---------------------------------------------------------- |
+| `name`               | `string`                  | **required**    | Display name — used in logs, traces, and persistent memory |
+| `instructions`       | `string`                  | None            | Natural language context injected as the system prompt     |
+| `workspaceRoot`      | `string`                  | `process.cwd()` | Root for file operations                                   |
+| `maxSteps`           | `number`                  | `25`            | Max tool-loop iterations                                   |
+| `model`              | `LanguageModel`           | Auto-resolved   | AI SDK model instance (optional override)                  |
+| `usageLimits`        | `UsageLimits`             | None            | Token and request caps                                     |
+| `tools`              | `Record<string, Tool>`    | `{}`            | Custom tools (merged with built-in tools)                  |
+| `onSubAgentActivity` | `SubAgentActivityHandler` | None            | Callback for live sub-agent stream chunks                  |
 
 ## Built-in Tools
 
 Every agent comes with 20 built-in tools:
 
-| Category | Tools |
-|----------|-------|
-| **Files** | `file_read`, `file_write`, `file_edit`, `file_create`, `glob`, `grep` |
-| **Code** | `ast_grep_search`, `ast_grep_replace` |
-| **Shell** | `shell`, `background` |
-| **Planning** | `plan`, `deep_reasoning` |
-| **Memory** | `remember`, `recall`, `update_context`, `forget` |
-| **Sub-Agents** | `spawn_agent` |
-| **Skills** | `search_skills` |
-| **Progress** | `progress_read`, `progress_update` |
-| **Browser** | `browser` |
+| Category       | Tools                                                                 |
+| -------------- | --------------------------------------------------------------------- |
+| **Files**      | `file_read`, `file_write`, `file_edit`, `file_create`, `glob`, `grep` |
+| **Code**       | `ast_grep_search`, `ast_grep_replace`                                 |
+| **Shell**      | `shell`, `background`                                                 |
+| **Planning**   | `plan`, `deep_reasoning`                                              |
+| **Memory**     | `remember`, `recall`, `update_context`, `forget`                      |
+| **Sub-Agents** | `spawn_agent`                                                         |
+| **Skills**     | `search_skills`                                                       |
+| **Progress**   | `progress_read`, `progress_update`                                    |
+| **Browser**    | `browser`                                                             |
 
 ```typescript
 const agent = createAgent({
   name: 'my-agent',
-  tools: { myCustomTool },  // Custom tools merge with built-in tools
+  tools: { myCustomTool }, // Custom tools merge with built-in tools
 });
 ```
 
@@ -125,21 +126,21 @@ const config = getConfig();
 
 All providers use `@ai-sdk/openai-compatible` for unified access:
 
-| Provider | Default | Description |
-|----------|---------|-------------|
-| `openrouter` | ✅ | Routes to any model (Anthropic, Google, Meta, etc.) |
-| `openai` | | Direct OpenAI API |
-| `ollama` | | Local models via Ollama |
-| Custom | | Any OpenAI-compatible API via `customProviders` config |
+| Provider     | Default | Description                                            |
+| ------------ | ------- | ------------------------------------------------------ |
+| `openrouter` | ✅      | Routes to any model (Anthropic, Google, Meta, etc.)    |
+| `openai`     |         | Direct OpenAI API                                      |
+| `ollama`     |         | Local models via Ollama                                |
+| Custom       |         | Any OpenAI-compatible API via `customProviders` config |
 
 ## Model Tiers
 
-| Tier | Purpose |
-|------|---------|
-| `fast` | Quick responses, low cost |
-| `standard` | Balanced quality/cost |
+| Tier        | Purpose                         |
+| ----------- | ------------------------------- |
+| `fast`      | Quick responses, low cost       |
+| `standard`  | Balanced quality/cost           |
 | `reasoning` | Complex logic, chain-of-thought |
-| `powerful` | Best quality, highest cost |
+| `powerful`  | Best quality, highest cost      |
 
 ## Memory
 
@@ -170,8 +171,8 @@ const approved = await hook.wait({ amount: 5000 });
 ```typescript
 import { parseDuration, formatDuration } from '@agntk/core/advanced';
 
-parseDuration('2h');      // 7200000
-formatDuration(7200000);  // "2h"
+parseDuration('2h'); // 7200000
+formatDuration(7200000); // "2h"
 ```
 
 ## Skills

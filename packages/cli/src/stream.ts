@@ -1,15 +1,6 @@
-/**
- * @fileoverview Stream consumer — renders agent activity to terminal.
- * Also contains the piped stdin reader.
- */
-
 import { createSpinner, summarizeArgs, summarizeOutput, formatDuration } from './ui';
 import type { Colors } from './ui';
 import type { OutputLevel } from './args';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface StreamConsumerOptions {
   output: NodeJS.WritableStream;
@@ -30,13 +21,8 @@ interface StreamStats {
 
 interface StreamResult {
   stats: StreamStats;
-  /** The first stream-level error encountered, if any */
   streamError?: string;
 }
-
-// ============================================================================
-// Stream Consumer
-// ============================================================================
 
 export async function consumeStream(
   stream: AsyncIterable<{ type: string; [key: string]: unknown }>,
@@ -62,7 +48,6 @@ export async function consumeStream(
   let streamError: string | undefined;
   let lastToolOutput: string | null = null;
 
-  // Reflection tag filtering state machine.
   let inReflection = false;
   let reflectionBuffer = '';
   const REFLECTION_OPEN = '<reflection>';
@@ -369,9 +354,106 @@ export async function consumeStream(
   return { stats, streamError };
 }
 
-// ============================================================================
-// Read piped stdin
-// ============================================================================
+interface SubAgentRendererOptions {
+  status: NodeJS.WritableStream;
+  colors: Colors;
+  level: OutputLevel;
+  isTTY: boolean;
+}
+
+const CLEAR_LINE = '\x1b[2K\r';
+
+export function createSubAgentRenderer(opts: SubAgentRendererOptions) {
+  const { status, colors, level } = opts;
+  const quiet = level === 'quiet';
+  const verbose = level === 'verbose';
+
+  const agentSteps = new Map<string, number>();
+  const agentToolCalls = new Map<string, number>();
+  const announced = new Set<string>();
+
+  return (data: {
+    agentId: string;
+    task: string;
+    chunk: { type: string; [key: string]: unknown };
+  }) => {
+    if (quiet) return;
+
+    const { agentId, task, chunk } = data;
+    const prefix = colors.dim('  │ ');
+
+    if (!announced.has(agentId)) {
+      announced.add(agentSteps.has(agentId) ? agentId : agentId);
+      agentSteps.set(agentId, 0);
+      agentToolCalls.set(agentId, 0);
+      if (opts.isTTY) status.write(CLEAR_LINE);
+      const shortTask = task.length > 60 ? task.slice(0, 57) + '...' : task;
+      status.write(
+        `  ${colors.dim('┌─')} ${colors.magenta(colors.bold('sub-agent'))} ${colors.dim(agentId)} ${colors.dim('─')} ${colors.dim(shortTask)}\n`,
+      );
+    }
+
+    switch (chunk.type) {
+      case 'start-step': {
+        const step = (agentSteps.get(agentId) ?? 0) + 1;
+        agentSteps.set(agentId, step);
+        status.write(`${prefix}${colors.dim('step ' + step)}\n`);
+        break;
+      }
+
+      case 'tool-call': {
+        const count = (agentToolCalls.get(agentId) ?? 0) + 1;
+        agentToolCalls.set(agentId, count);
+        const toolName = chunk.toolName as string;
+        if (verbose) {
+          status.write(`${prefix}${colors.cyan('▶')} ${colors.cyan(colors.bold(toolName))}\n`);
+        } else {
+          const argsSummary = summarizeArgs(chunk.input, colors);
+          const display = argsSummary
+            ? `${prefix}${colors.cyan('▶')} ${colors.cyan(colors.bold(toolName))} ${argsSummary}`
+            : `${prefix}${colors.cyan('▶')} ${colors.cyan(colors.bold(toolName))}`;
+          status.write(`${display}\n`);
+        }
+        break;
+      }
+
+      case 'tool-result': {
+        const toolName = chunk.toolName as string;
+        const summary = summarizeOutput(chunk.output);
+        const firstLine = summary.split('\n')[0]!;
+        const truncated = firstLine.length > 80 ? firstLine.slice(0, 77) + '...' : firstLine;
+        status.write(
+          `${prefix}${colors.green('✔')} ${colors.green(colors.dim(toolName + ': '))}${colors.dim(truncated)}\n`,
+        );
+        break;
+      }
+
+      case 'tool-error': {
+        const toolName = chunk.toolName as string;
+        const error =
+          chunk.error instanceof Error
+            ? chunk.error.message
+            : String(chunk.error ?? 'unknown error');
+        status.write(
+          `${prefix}${colors.red('✖')} ${colors.red(colors.bold(toolName))} ${colors.red(error)}\n`,
+        );
+        break;
+      }
+
+      case 'finish': {
+        const steps = agentSteps.get(agentId) ?? 0;
+        const tools = agentToolCalls.get(agentId) ?? 0;
+        status.write(
+          `  ${colors.dim('└─')} ${colors.green('done')} ${colors.dim(`(${steps} steps, ${tools} tool calls)`)}\n`,
+        );
+        break;
+      }
+
+      default:
+        break;
+    }
+  };
+}
 
 export async function readStdin(timeoutMs: number = 100): Promise<string | null> {
   if (process.stdin.isTTY) return null;

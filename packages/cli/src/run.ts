@@ -1,8 +1,3 @@
-/**
- * @fileoverview Main orchestrator — parses args, resolves provider, routes to command.
- * This is the only place that calls process.exit() for normal flow control.
- */
-
 import { homedir } from 'node:os';
 import { parseCLIArgs, printHelp } from './args';
 import { listAgents, agentInfo, deleteAgent, stopAgent, cleanAgents } from './agents';
@@ -23,7 +18,6 @@ const USAGE_HINT =
 export async function main(): Promise<void> {
   const args = parseCLIArgs(process.argv.slice(2));
 
-  // Fast paths — no heavy imports
   if (args.version) {
     console.log(`agntk (${getVersion()})`);
     process.exit(0);
@@ -67,14 +61,12 @@ export async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // Validate: need a name or prompt
   if (!args.name) {
     if (!args.prompt && process.stdin.isTTY) {
       console.error(`Error: No prompt provided.\n${USAGE_HINT}`);
       process.exit(1);
     }
 
-    // Default name if no --name flag was given
     args.name = 'default';
   }
 
@@ -104,7 +96,6 @@ export async function main(): Promise<void> {
     }
   }
 
-  // Warn if workspace is the home directory (likely unintentional)
   if (args.workspace === homedir()) {
     process.stderr.write(
       'Warning: Workspace is your home directory.\n' +
@@ -112,13 +103,11 @@ export async function main(): Promise<void> {
     );
   }
 
-  // Interactive mode
   if (args.interactive) {
     await runRepl(args);
     process.exit(0);
   }
 
-  // Build final prompt (handle piped stdin)
   let prompt = args.prompt;
   const pipedInput = await readStdin();
   if (pipedInput) {
@@ -130,15 +119,26 @@ export async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // One-shot mode
-  await runOneShot(prompt, args);
+  const result = await runOneShot(prompt, args);
 
-  // Flush observability traces before exit
+  const canFollowUp =
+    result && process.stdin.isTTY && process.stderr.isTTY && args.outputLevel !== 'quiet';
+
+  if (canFollowUp) {
+    await runRepl(args, {
+      agent: result.agent,
+      initialHistory: [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: result.responseText },
+      ],
+    });
+  }
+
   try {
     const { shutdownObservability } = await import('@agntk/core');
     await shutdownObservability();
   } catch {
-    // Observability not available — that's fine
+    void 0;
   }
 
   process.exit(0);

@@ -1,13 +1,4 @@
-/**
- * @fileoverview CLI argument parsing and help text.
- * Intentionally minimal — no dependencies on arg-parsing libraries.
- */
-
 import { getVersion } from './version';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export type OutputLevel = 'quiet' | 'normal' | 'verbose';
 
@@ -26,10 +17,6 @@ export interface CLIArgs {
   command: CLICommand | null;
   commandArg: string | null;
 }
-
-// ============================================================================
-// Arg Parsing
-// ============================================================================
 
 const COMMANDS = new Set<CLICommand>(['list', 'info', 'delete', 'stop', 'clean']);
 
@@ -93,7 +80,6 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
         if (!arg.startsWith('-')) {
           if (positionals.length === 0 && COMMANDS.has(arg as CLICommand)) {
             args.command = arg as CLICommand;
-            // Grab next arg as the command argument (e.g. agent name)
             const next = argv[i + 1];
             if (next && !next.startsWith('-') && !COMMANDS.has(next as CLICommand)) {
               args.commandArg = next;
@@ -107,20 +93,12 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
     }
   }
 
-  // All positionals join into the prompt.
-  //   agntk "do something"              → prompt = "do something"
-  //   agntk whats up                    → prompt = "whats up"
-  //   agntk -n myagent fix the tests    → name = "myagent", prompt = "fix the tests"
   if (positionals.length > 0) {
     args.prompt = positionals.join(' ');
   }
 
   return args;
 }
-
-// ============================================================================
-// Help
-// ============================================================================
 
 export function printHelp(): void {
   const version = getVersion();
@@ -140,9 +118,13 @@ export function printHelp(): void {
     --workspace <path>       Workspace root (default: cwd)
     --max-steps <n>          Max tool-loop steps (default: unlimited)
     --verbose                Show full tool args and output
-    -q, --quiet              Text output only (for piping)
+    -q, --quiet              Text output only (for piping, no follow-up)
     -v, --version            Show version
     -h, --help               Show help
+
+  After a one-shot prompt completes, you can type follow-up messages
+  without re-running the command. The agent remembers the conversation.
+  Use -q/--quiet to disable this and exit immediately.
 
   Commands:
     list                     List all known agents

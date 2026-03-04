@@ -132,13 +132,31 @@ export function listAgents(): void {
   }
 
   const entries = readdirSync(AGENTS_DIR, { withFileTypes: true });
-  const agents = entries.filter((e) => e.isDirectory());
+  const allDirs = entries.filter((e) => e.isDirectory());
+
+  // Filter out sub-agent directories (name starts with another agent's name + "_")
+  const parentNames = allDirs.map((d) => d.name);
+  const agents = allDirs.filter(
+    (d) => !parentNames.some((p) => p !== d.name && d.name.startsWith(`${p}_`)),
+  );
 
   if (agents.length === 0) {
     console.log(
       colors.dim('No agents found. Create one with: agntk --name "my-agent" "do something"'),
     );
     return;
+  }
+
+  // Count sub-agents per parent for display
+  const subAgentCounts = new Map<string, number>();
+  for (const dir of allDirs) {
+    if (!agents.some((a) => a.name === dir.name)) {
+      // This is a sub-agent — find its parent
+      const parent = agents.find((a) => dir.name.startsWith(`${a.name}_`));
+      if (parent) {
+        subAgentCounts.set(parent.name, (subAgentCounts.get(parent.name) ?? 0) + 1);
+      }
+    }
   }
 
   console.log(`\n${colors.bold(`Agents (${agents.length})`)}\n`);
@@ -197,6 +215,10 @@ export function listAgents(): void {
       parts.push(colors.cyan('🧠 memory'));
     } else if (hasContext) {
       parts.push(colors.dim('has context'));
+    }
+    const subCount = subAgentCounts.get(agent.name);
+    if (subCount) {
+      parts.push(colors.dim(`${subCount} sub-agent${subCount > 1 ? 's' : ''}`));
     }
 
     console.log(`  ${statusIcon} ${nameStr}${padding}${parts.join(colors.dim('  ·  '))}`);
@@ -567,7 +589,25 @@ export async function deleteAgent(name: string): Promise<void> {
   }
 
   rmSync(agentDir, { recursive: true, force: true });
-  console.log(`${colors.green('Deleted')} ${dirName}`);
+
+  // Also clean up sub-agent directories
+  if (existsSync(AGENTS_DIR)) {
+    const subDirs = readdirSync(AGENTS_DIR, { withFileTypes: true }).filter(
+      (e) => e.isDirectory() && e.name.startsWith(`${dirName}_`),
+    );
+    for (const sub of subDirs) {
+      rmSync(join(AGENTS_DIR, sub.name), { recursive: true, force: true });
+    }
+    if (subDirs.length > 0) {
+      console.log(
+        `${colors.green('Deleted')} ${dirName} ${colors.dim(`(+ ${subDirs.length} sub-agent${subDirs.length > 1 ? 's' : ''})`)}`,
+      );
+    } else {
+      console.log(`${colors.green('Deleted')} ${dirName}`);
+    }
+  } else {
+    console.log(`${colors.green('Deleted')} ${dirName}`);
+  }
 }
 
 // ============================================================================
@@ -641,7 +681,13 @@ export async function cleanAgents(): Promise<void> {
   }
 
   const entries = readdirSync(AGENTS_DIR, { withFileTypes: true });
-  const agents = entries.filter((e) => e.isDirectory());
+  const allDirs = entries.filter((e) => e.isDirectory());
+
+  // Filter out sub-agent directories (name starts with another agent's name + "_")
+  const dirNames = allDirs.map((d) => d.name);
+  const agents = allDirs.filter(
+    (d) => !dirNames.some((p) => p !== d.name && d.name.startsWith(`${p}_`)),
+  );
 
   if (agents.length === 0) {
     console.log(colors.dim('No agents found.'));

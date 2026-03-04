@@ -1,9 +1,3 @@
-/**
- * @fileoverview Sub-agent spawning and lifecycle management.
- * Handles creating, executing, and summarizing tasks delegted to sub-agents.
- * Supports both synchronous (blocking) and asynchronous (background) execution.
- */
-
 import { generateId, generateText } from 'ai';
 import { z } from 'zod';
 import { createLogger } from '@agntk/logger';
@@ -37,6 +31,8 @@ export interface SpawnAgentOptions {
   workspacePath?: string;
 
   onStream?: (data: SubAgentStreamData) => void;
+
+  onActivity?: SubAgentActivityHandler;
 }
 
 export interface SubAgentStreamData {
@@ -45,6 +41,15 @@ export interface SubAgentStreamData {
   text: string;
   status: 'streaming' | 'complete';
 }
+
+export interface SubAgentActivityChunk {
+  type: 'sub-agent-activity';
+  agentId: string;
+  task: string;
+  chunk: { type: string; [key: string]: unknown };
+}
+
+export type SubAgentActivityHandler = (data: SubAgentActivityChunk) => void;
 
 const DESCRIPTION = `Spawn a sub-agent to work on a specific task.
 
@@ -125,6 +130,7 @@ async function executeSpawnAgent(
     registry,
     workspacePath,
     onStream,
+    onActivity,
   } = options;
 
   const { task, context, model: modelTier } = input;
@@ -187,6 +193,7 @@ async function executeSpawnAgent(
       agentWorkspacePath,
       registry ?? null,
       onStream ?? null,
+      onActivity ?? null,
     ).catch((err) => {
       log.error('Background sub-agent failed', {
         agentId,
@@ -211,6 +218,7 @@ async function executeSpawnAgent(
     agentWorkspacePath,
     registry ?? null,
     onStream ?? null,
+    onActivity ?? null,
   );
 }
 
@@ -222,6 +230,7 @@ async function runSubAgentSync(
   agentWorkspacePath: string,
   registry: AgentRegistry | null,
   onStream: ((data: SubAgentStreamData) => void) | null,
+  onActivity: SubAgentActivityHandler | null,
 ): Promise<SpawnAgentSyncResult> {
   if (onStream) {
     onStream({ type: 'sub-agent-stream', agentId, text: '', status: 'streaming' });
@@ -231,6 +240,9 @@ async function runSubAgentSync(
     const stream = subAgent.stream({ prompt });
 
     for await (const chunk of stream.fullStream) {
+      if (onActivity) {
+        onActivity({ type: 'sub-agent-activity', agentId, task, chunk });
+      }
       if (chunk.type === 'text-delta' && chunk.text) {
         if (onStream) {
           onStream({ type: 'sub-agent-stream', agentId, text: chunk.text, status: 'streaming' });
@@ -301,11 +313,15 @@ async function runSubAgentInBackground(
   agentWorkspacePath: string,
   registry: AgentRegistry | null,
   onStream: ((data: SubAgentStreamData) => void) | null,
+  onActivity: SubAgentActivityHandler | null,
 ): Promise<void> {
   try {
     const stream = subAgent.stream({ prompt });
 
     for await (const chunk of stream.fullStream) {
+      if (onActivity) {
+        onActivity({ type: 'sub-agent-activity', agentId, task, chunk });
+      }
       if (chunk.type === 'text-delta' && chunk.text && onStream) {
         onStream({ type: 'sub-agent-stream', agentId, text: chunk.text, status: 'streaming' });
       }

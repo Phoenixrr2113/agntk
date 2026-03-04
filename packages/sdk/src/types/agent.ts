@@ -1,6 +1,7 @@
 import type { LanguageModel, LanguageModelUsage, Tool } from 'ai';
 import type { UsageLimits } from '../usage-limits';
 import type { ApprovalConfig } from '../tools/approval';
+import type { SubAgentActivityHandler } from '../tools/spawn-agent';
 
 export interface AgentOptions {
   name: string;
@@ -18,6 +19,8 @@ export interface AgentOptions {
   tools?: Record<string, Tool>;
 
   approval?: boolean | ApprovalConfig;
+
+  onSubAgentActivity?: SubAgentActivityHandler;
 }
 
 export interface Agent {

@@ -111,6 +111,8 @@ export {
   type SpawnAgentSyncResult,
   type SpawnAgentAsyncResult,
   type SubAgentStreamData,
+  type SubAgentActivityChunk,
+  type SubAgentActivityHandler,
 } from './spawn-agent';
 
 export {

@@ -31,6 +31,8 @@ npx agntk list
 
 That's it. No config files. No API key setup (unless you want to). It reads your files, runs commands, browses the web, spawns sub-agents, and remembers what it learns.
 
+After any one-shot prompt, you can type follow-up messages directly — the agent stays in the terminal and remembers the conversation. Use `-q` to disable this and exit immediately.
+
 ---
 
 ## What It Does
@@ -43,7 +45,7 @@ Out of the box, every agent has 20+ built-in tools:
 - **Browser** — navigate, extract, interact with web pages
 - **Planning** — break down complex tasks, deep reasoning for hard problems
 - **Memory** — remember facts, recall context, build knowledge across sessions
-- **Sub-agents** — spawn specialized agents (coder, researcher, analyst) for parallel work
+- **Sub-agents** — spawn specialized agents for parallel work, with live activity streaming
 - **Skills** — auto-discover `SKILL.md` files for project-specific capabilities
 
 ---
@@ -88,7 +90,7 @@ agntk list                        List all agents
 | `--workspace`    |       | Workspace root (default: current directory) |
 | `--max-steps`    |       | Max tool-loop steps (default: 25)           |
 | `--verbose`      |       | Show full tool args and output              |
-| `--quiet`        | `-q`  | Text output only (for piping)               |
+| `--quiet`        | `-q`  | Text output only (no follow-up, for piping) |
 | `--version`      | `-v`  | Show version                                |
 | `--help`         | `-h`  | Show help                                   |
 

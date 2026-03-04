@@ -1,44 +1,70 @@
 /**
- * @fileoverview Interactive REPL mode — readline-based agent conversation.
+ * @fileoverview Interactive REPL for agntk CLI.
  */
-
 import { createInterface, type Interface } from 'node:readline';
 import { createColors } from './ui';
 import { setupLockCleanup } from './agents';
-import { consumeStream } from './stream';
+import { consumeStream, createSubAgentRenderer } from './stream';
 import { getVersion } from './version';
 import type { CLIArgs } from './args';
+import type { Agent } from '@agntk/core';
 
-export async function runRepl(args: CLIArgs): Promise<void> {
-  const { createAgent } = await import('@agntk/core');
+export interface ReplOptions {
+  agent?: Agent;
+  initialHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+}
+
+export async function runRepl(args: CLIArgs, opts?: ReplOptions): Promise<void> {
   const colors = createColors(process.stdout.isTTY ?? false);
+  let agent: Agent;
 
-  let testModel: import('ai').LanguageModel | undefined;
-  if (process.env.AGNTK_TEST_MODE === '1') {
-    const { createTestModel } = await import('./test-model.js');
-    testModel = createTestModel();
+  if (opts?.agent) {
+    agent = opts.agent;
+  } else {
+    const { createAgent } = await import('@agntk/core');
+
+    let testModel: import('ai').LanguageModel | undefined;
+    if (process.env.AGNTK_TEST_MODE === '1') {
+      const { createTestModel } = await import('./test-model.js');
+      testModel = createTestModel();
+    }
+
+    const subAgentRenderer = createSubAgentRenderer({
+      status: process.stderr,
+      colors,
+      level: args.outputLevel,
+      isTTY: process.stderr.isTTY ?? false,
+    });
+
+    agent = createAgent({
+      name: args.name!,
+      instructions: args.instructions ?? undefined,
+      workspaceRoot: args.workspace,
+      ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
+      ...(testModel ? { model: testModel } : {}),
+      onSubAgentActivity: subAgentRenderer,
+    });
   }
 
-  const agent = createAgent({
-    name: args.name!,
-    instructions: args.instructions ?? undefined,
-    workspaceRoot: args.workspace,
-    ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
-    ...(testModel ? { model: testModel } : {}),
-  });
-
-  setupLockCleanup(args.name!);
-
-  const version = getVersion();
+  if (!opts?.agent) {
+    setupLockCleanup(args.name!);
+  }
   const output = process.stdout;
-  const toolCount = agent.getToolNames().length;
 
-  const modelLabel = agent.getModelId();
-  output.write(`\n${colors.bold('⚡ agntk')} ${colors.dim(`(${version})`)}\n`);
-  output.write(
-    `${colors.cyan(colors.bold(args.name!))} ${colors.dim('|')} ${colors.dim(modelLabel)} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.green('memory: on')}\n`,
-  );
-  output.write(`${colors.dim('Type /help for commands, /exit or Ctrl+C to quit.')}\n\n`);
+  if (opts?.initialHistory) {
+    output.write(
+      `${colors.dim('Type a follow-up, /help for commands, /exit or Ctrl+C to quit.')}\n\n`,
+    );
+  } else {
+    const version = getVersion();
+    const toolCount = agent.getToolNames().length;
+    const modelLabel = agent.getModelId();
+    output.write(`\n${colors.bold('⚡ agntk')} ${colors.dim(`(${version})`)}\n`);
+    output.write(
+      `${colors.cyan(colors.bold(args.name!))} ${colors.dim('|')} ${colors.dim(modelLabel)} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.green('memory: on')}\n`,
+    );
+    output.write(`${colors.dim('Type /help for commands, /exit or Ctrl+C to quit.')}\n\n`);
+  }
 
   const rl: Interface = createInterface({
     input: process.stdin,
@@ -47,7 +73,9 @@ export async function runRepl(args: CLIArgs): Promise<void> {
     terminal: true,
   });
 
-  const history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+  const history: Array<{ role: 'user' | 'assistant'; content: string }> = [
+    ...(opts?.initialHistory ?? []),
+  ];
 
   const pendingLines: string[] = [];
   let busy = false;

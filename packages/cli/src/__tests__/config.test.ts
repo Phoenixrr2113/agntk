@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Tests for the CLI configuration.
+ */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 

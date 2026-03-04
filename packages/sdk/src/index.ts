@@ -1,6 +1,10 @@
+/**
+ * @fileoverview Main entry point for the SDK.
+ */
 export { createAgent, AGENT_STATE_BASE, resolveAgentStatePath } from './agent';
 
 export type { AgentOptions, Agent, AgentStreamResult } from './types/agent';
+export type { SubAgentActivityChunk, SubAgentActivityHandler } from './tools/spawn-agent';
 
 export { resolveModel, models, setResolvedProvider, getResolvedProviderState } from './models';
 export type { ResolvedProvider, ResolvedModel } from './models';

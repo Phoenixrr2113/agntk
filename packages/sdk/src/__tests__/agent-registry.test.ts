@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Tests for the AgentRegistry.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockFs: Record<string, string> = {};

@@ -1,13 +1,18 @@
 /**
- * @fileoverview One-shot execution mode — run a single prompt and exit.
+ * @fileoverview Single-turn execution for agntk CLI.
  */
-
 import { createColors } from './ui';
 import { setupLockCleanup } from './agents';
-import { consumeStream } from './stream';
+import { consumeStream, createSubAgentRenderer } from './stream';
 import type { CLIArgs } from './args';
+import type { Agent } from '@agntk/core';
 
-export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
+export interface OneShotResult {
+  agent: Agent;
+  responseText: string;
+}
+
+export async function runOneShot(prompt: string, args: CLIArgs): Promise<OneShotResult | null> {
   const { createAgent } = await import('@agntk/core');
   const colors = createColors(process.stderr.isTTY ?? false);
 
@@ -17,12 +22,21 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
     testModel = createTestModel();
   }
 
+  const isTTY = process.stderr.isTTY ?? false;
+  const subAgentRenderer = createSubAgentRenderer({
+    status: process.stderr,
+    colors,
+    level: args.outputLevel,
+    isTTY,
+  });
+
   const agent = createAgent({
     name: args.name!,
     instructions: args.instructions ?? undefined,
     workspaceRoot: args.workspace,
     ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
     ...(testModel ? { model: testModel } : {}),
+    onSubAgentActivity: subAgentRenderer,
   });
 
   setupLockCleanup(args.name!);
@@ -83,6 +97,8 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
         );
       }
     }
+
+    return { agent, responseText: finalText ?? '' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
 
@@ -106,4 +122,6 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
   } finally {
     process.stderr.write = origStderrWrite;
   }
+
+  return null;
 }

@@ -1,3 +1,6 @@
+/**
+ * @fileoverview Main SDK agent implementation and lifecycle management.
+ */
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
 import { ToolLoopAgent, stepCountIs } from 'ai';
@@ -161,7 +164,8 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
       maxSpawnDepth: DEFAULT_MAX_SPAWN_DEPTH,
       currentDepth: spawnDepth,
       registry: agentRegistry,
-      workspacePath: undefined, // set lazily during ensureInit
+      workspacePath: undefined,
+      onActivity: options.onSubAgentActivity,
       createAgent: (subAgentOptions) => {
         const subName = `${name}/${subAgentOptions.task.slice(0, 30).replace(/[^a-zA-Z0-9-]/g, '-')}`;
         log.info('Spawning sub-agent', { parentName: name, subName });

@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+/**
+ * @fileoverview Main entry point for the agntk CLI.
+ */
+
 // Load .env files before anything else reads process.env
 import 'dotenv/config';
 
