@@ -30,15 +30,15 @@
   },
   "dependencies": {
     "@agntk/logger": "workspace:*",
-    "cheerio": "^1.0.0",
+    "cheerio": "^1.2.0",
     "duck-duck-scrape": "^2.2.7",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
-    "@types/node": "^20.17.19",
+    "@types/node": "^25.3.3",
     "typescript": "^5.7.3",
-    "vitest": "^3.2.3"
+    "vitest": "^4.0.18"
   },
   "files": [
     "dist",
