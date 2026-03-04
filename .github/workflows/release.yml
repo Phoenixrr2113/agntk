@@ -51,6 +51,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - run: pnpm build
 
       # Auto-generate changeset from conventional commits if none exist
