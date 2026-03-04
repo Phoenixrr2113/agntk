@@ -348,7 +348,7 @@ export async function consumeStream(
     }
   }
 
-  const hitStepLimit = opts.maxSteps && stats.steps >= opts.maxSteps;
+  const hitStepLimit = opts.maxSteps && opts.maxSteps > 0 && stats.steps >= opts.maxSteps;
 
   if (hitStepLimit && !quiet) {
     status.write(
@@ -386,7 +386,7 @@ export async function readStdin(timeoutMs: number = 100): Promise<string | null>
       resolve(chunks.length === 0 ? null : Buffer.concat(chunks).toString('utf-8'));
     };
 
-    process.stdin.on('data', (chunk) => chunks.push(chunk));
+    process.stdin.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
     process.stdin.on('end', finish);
     process.stdin.on('error', () => finish());
     setTimeout(finish, timeoutMs);

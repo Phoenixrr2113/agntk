@@ -1,5 +1,6 @@
 /**
- * Tool Error utilities
+ * @fileoverview Tool execution error handling.
+ * Provides specialized error classes and types for common tool failures.
  */
 
 export enum ToolErrorType {
@@ -14,7 +15,7 @@ export class ToolError extends Error {
   constructor(
     message: string,
     public readonly type: ToolErrorType,
-    public readonly context?: Record<string, unknown>
+    public readonly context?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ToolError';

@@ -1,16 +1,3 @@
-/**
- * @fileoverview Integration tests for workflow hooks and human-in-the-loop system.
- * Tests defineHook, resumeHook error handling, HookRegistry, and error classes.
- *
- * NOTE: hook.wait() requires the Workflow DevKit (WDK) runtime context.
- * Since @workflow/core is installed but no workflow runtime is active in tests,
- * createHook() throws "can only be called inside a workflow function".
- * The in-memory fallback only activates when the `workflow` package is not installed.
- *
- * Therefore, tests for the full wait → resume lifecycle are omitted here.
- * Those flows are exercised in e2e tests running under an actual workflow runtime.
- */
-
 import { describe, it, expect } from 'vitest';
 import {
   defineHook,

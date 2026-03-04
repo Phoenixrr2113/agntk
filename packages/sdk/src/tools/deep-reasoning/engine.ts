@@ -27,7 +27,7 @@ export class DeepReasoningEngine {
       if (!this.branches[input.branchId]) {
         this.branches[input.branchId] = [];
       }
-      
+
       const branch = this.branches[input.branchId];
       if (branch) {
         branch.push(input);
@@ -60,13 +60,12 @@ export class DeepReasoningEngine {
   }
 }
 
-// Global configuration state
 let isEnabled = false;
 let globalEngine: DeepReasoningEngine | null = null;
 
 export function configureDeepReasoning(config: DeepReasoningConfig): void {
   isEnabled = config.enabled;
-  
+
   if (config.enabled) {
     globalEngine = new DeepReasoningEngine({
       maxHistorySize: config.maxHistorySize,

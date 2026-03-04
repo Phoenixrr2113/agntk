@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Type definitions and schemas for deep reasoning.
+ * Defines the structure of thoughts, reasoning results, and configuration.
+ */
 import { z } from 'zod';
 
 export interface ThoughtData {
@@ -21,19 +25,10 @@ export interface ReasoningResult {
 }
 
 export interface DeepReasoningConfig {
-  /**
-   * When true, enables deep reasoning with no step restrictions
-   */
   enabled: boolean;
-  
-  /**
-   * Maximum thoughts to keep in history (older ones are discarded)
-   */
+
   maxHistorySize?: number;
-  
-  /**
-   * Maximum thoughts per branch
-   */
+
   maxBranchSize?: number;
 }
 
@@ -44,7 +39,12 @@ export const deepReasoningInputSchema = z.object({
   totalThoughts: z.number().int().min(1).describe('How many steps you expect to need'),
   isRevision: z.boolean().optional().describe('True if reconsidering a previous thought'),
   revisesThought: z.number().int().min(1).optional().describe('Which thought number to revise'),
-  branchFromThought: z.number().int().min(1).optional().describe('Split reasoning from this thought'),
+  branchFromThought: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Split reasoning from this thought'),
   branchId: z.string().optional().describe('Name for this reasoning branch'),
   needsMoreThoughts: z.boolean().optional().describe('True if need to extend thinking'),
 });

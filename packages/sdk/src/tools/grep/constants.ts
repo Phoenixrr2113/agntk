@@ -24,8 +24,8 @@ function findExecutable(name: string): string | null {
     if (result.status === 0 && result.stdout.trim()) {
       return result.stdout.trim().split('\n')[0]!;
     }
-  } catch (_e: unknown) {
-    // Command execution failed
+  } catch {
+    void 0;
   }
   return null;
 }
@@ -48,9 +48,8 @@ function getAgentBundledRg(): string | null {
   const rgName = isWindows ? 'rg.exe' : 'rg';
 
   const candidates = [
-    // XDG data path (highest priority - where agent installs rg)
     join(getDataDir(), 'agent', 'bin', rgName),
-    // Legacy paths relative to execPath
+
     join(execDir, rgName),
     join(execDir, 'bin', rgName),
     join(execDir, '..', 'bin', rgName),
@@ -114,7 +113,7 @@ export async function resolveGrepCliWithAutoInstall(): Promise<ResolvedCli> {
     const rgPath = await downloadAndInstallRipgrep();
     cachedCli = { path: rgPath, backend: 'rg' };
     return cachedCli;
-  } catch (_e: unknown) {
+  } catch {
     return current;
   }
 }

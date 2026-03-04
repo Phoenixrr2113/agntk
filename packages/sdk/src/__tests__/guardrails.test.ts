@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the guardrails system.
- */
-
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@agntk/logger', () => ({
@@ -23,13 +19,14 @@ vi.mock('@agntk/logger', () => ({
 }));
 
 import { contentFilter, topicFilter, lengthLimit, custom } from '../guardrails/built-ins';
-import { runGuardrails, handleGuardrailResults, buildRetryFeedback, wrapWithGuardrails } from '../guardrails/runner';
+import {
+  runGuardrails,
+  handleGuardrailResults,
+  buildRetryFeedback,
+  wrapWithGuardrails,
+} from '../guardrails/runner';
 import { GuardrailBlockedError } from '../guardrails/types';
 import type { Guardrail, GuardrailResult } from '../guardrails/types';
-
-// ============================================================================
-// contentFilter
-// ============================================================================
 
 describe('contentFilter', () => {
   it('should pass clean text', () => {
@@ -95,10 +92,6 @@ describe('contentFilter', () => {
   });
 });
 
-// ============================================================================
-// topicFilter
-// ============================================================================
-
 describe('topicFilter', () => {
   it('should pass allowed content', () => {
     const guard = topicFilter(['violence', 'drugs']);
@@ -125,10 +118,6 @@ describe('topicFilter', () => {
     expect(result.passed).toBe(false);
   });
 });
-
-// ============================================================================
-// lengthLimit
-// ============================================================================
 
 describe('lengthLimit', () => {
   it('should pass text within char limit', () => {
@@ -165,10 +154,6 @@ describe('lengthLimit', () => {
   });
 });
 
-// ============================================================================
-// custom guardrail
-// ============================================================================
-
 describe('custom guardrail', () => {
   it('should work with boolean return', () => {
     const guard = custom('no-profanity', (text) => !text.includes('bad'));
@@ -190,17 +175,13 @@ describe('custom guardrail', () => {
   });
 });
 
-// ============================================================================
-// runGuardrails (sequential execution with filter chaining)
-// ============================================================================
-
 describe('runGuardrails', () => {
   it('should run guardrails sequentially', async () => {
     const order: string[] = [];
 
     const guard1: Guardrail = {
       name: 'g1',
-      check: async (text) => {
+      check: async (_text) => {
         order.push('g1-start');
         await new Promise((r) => setTimeout(r, 50));
         order.push('g1-end');
@@ -210,7 +191,7 @@ describe('runGuardrails', () => {
 
     const guard2: Guardrail = {
       name: 'g2',
-      check: async (text) => {
+      check: async (_text) => {
         order.push('g2-start');
         await new Promise((r) => setTimeout(r, 50));
         order.push('g2-end');
@@ -222,7 +203,7 @@ describe('runGuardrails', () => {
 
     expect(results).toHaveLength(2);
     expect(results.every((r) => r.passed)).toBe(true);
-    // Sequential: g1 completes before g2 starts
+
     expect(order[0]).toBe('g1-start');
     expect(order[1]).toBe('g1-end');
     expect(order[2]).toBe('g2-start');
@@ -257,8 +238,7 @@ describe('runGuardrails', () => {
     );
 
     expect(results).toHaveLength(2);
-    // The key assertion: PII should be redacted AND text should be truncated
-    // If filters ran in parallel, the truncated version would still contain the SSN
+
     expect(filteredText).not.toContain('123-45-6789');
     expect(filteredText).toContain('[SSN REDACTED]');
     expect(filteredText.length).toBeLessThanOrEqual(50);
@@ -267,7 +247,9 @@ describe('runGuardrails', () => {
   it('should handle guardrail errors gracefully', async () => {
     const guard: Guardrail = {
       name: 'broken',
-      check: () => { throw new Error('boom'); },
+      check: () => {
+        throw new Error('boom');
+      },
     };
 
     const { results } = await runGuardrails([guard], 'test', { phase: 'input' });
@@ -284,10 +266,6 @@ describe('runGuardrails', () => {
   });
 });
 
-// ============================================================================
-// handleGuardrailResults
-// ============================================================================
-
 describe('handleGuardrailResults', () => {
   it('should return blocked: false when all pass', () => {
     const results: GuardrailResult[] = [
@@ -299,10 +277,10 @@ describe('handleGuardrailResults', () => {
   });
 
   it('should throw on block with onBlock=throw', () => {
-    const results: GuardrailResult[] = [
-      { passed: false, name: 'g1', message: 'blocked' },
-    ];
-    expect(() => handleGuardrailResults(results, 'text', 'text', 'output', 'throw')).toThrow(GuardrailBlockedError);
+    const results: GuardrailResult[] = [{ passed: false, name: 'g1', message: 'blocked' }];
+    expect(() => handleGuardrailResults(results, 'text', 'text', 'output', 'throw')).toThrow(
+      GuardrailBlockedError,
+    );
   });
 
   it('should return filtered text with onBlock=filter', () => {
@@ -315,18 +293,12 @@ describe('handleGuardrailResults', () => {
   });
 
   it('should signal retry with onBlock=retry', () => {
-    const results: GuardrailResult[] = [
-      { passed: false, name: 'g1', message: 'blocked' },
-    ];
+    const results: GuardrailResult[] = [{ passed: false, name: 'g1', message: 'blocked' }];
     const outcome = handleGuardrailResults(results, 'text', 'text', 'output', 'retry');
     expect(outcome.blocked).toBe(true);
     expect(outcome.text).toBe('text');
   });
 });
-
-// ============================================================================
-// GuardrailBlockedError
-// ============================================================================
 
 describe('GuardrailBlockedError', () => {
   it('should have correct properties', () => {
@@ -343,10 +315,6 @@ describe('GuardrailBlockedError', () => {
   });
 });
 
-// ============================================================================
-// buildRetryFeedback
-// ============================================================================
-
 describe('buildRetryFeedback', () => {
   it('should build feedback from failed results', () => {
     const results: GuardrailResult[] = [
@@ -360,10 +328,6 @@ describe('buildRetryFeedback', () => {
     expect(feedback).not.toContain('lengthLimit');
   });
 });
-
-// ============================================================================
-// wrapWithGuardrails
-// ============================================================================
 
 describe('wrapWithGuardrails', () => {
   it('should pass through when no guardrails block', async () => {
@@ -388,7 +352,7 @@ describe('wrapWithGuardrails', () => {
     await expect(wrapped({ prompt: 'Tell me about forbidden things' })).rejects.toThrow(
       GuardrailBlockedError,
     );
-    // Agent should NOT have been called
+
     expect(generate).not.toHaveBeenCalled();
   });
 
@@ -405,12 +369,12 @@ describe('wrapWithGuardrails', () => {
 
   it('should retry with feedback when onBlock=retry', async () => {
     let callCount = 0;
-    const generate = vi.fn().mockImplementation(async ({ prompt }: { prompt: string }) => {
+    const generate = vi.fn().mockImplementation(async ({ prompt: _prompt }: { prompt: string }) => {
       callCount++;
       if (callCount === 1) {
         return { text: 'SSN: 123-45-6789' };
       }
-      // Second call (after retry feedback) returns clean output
+
       return { text: 'Here is the information you requested.' };
     });
 
@@ -424,7 +388,7 @@ describe('wrapWithGuardrails', () => {
 
     expect(result.text).toBe('Here is the information you requested.');
     expect(generate).toHaveBeenCalledTimes(2);
-    // Second call should include guardrail feedback
+
     const secondCallPrompt = generate.mock.calls[1][0].prompt;
     expect(secondCallPrompt).toContain('GUARDRAIL FEEDBACK');
   });
@@ -438,7 +402,7 @@ describe('wrapWithGuardrails', () => {
     });
 
     await expect(wrapped({ prompt: 'Give me info' })).rejects.toThrow(GuardrailBlockedError);
-    // Original call + 1 retry
+
     expect(generate).toHaveBeenCalledTimes(2);
   });
 
@@ -506,7 +470,6 @@ describe('wrapWithGuardrails', () => {
 
     await wrapped({ prompt: 'test' });
 
-    // Guardrails run sequentially so each filter operates on previous output
     expect(order).toEqual(['input-1-start', 'input-1-end', 'input-2-start', 'input-2-end']);
   });
 });

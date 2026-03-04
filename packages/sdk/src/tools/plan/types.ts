@@ -21,7 +21,7 @@ export interface ScopeAssessment {
   isLarge: boolean;
   stepCount: number;
   recommendation: string;
-  availableAgents?: Array<{ role: string; specialization: string }>;
+  availableAgents?: Array<{ specialization: string }>;
   handoffExample?: string;
 }
 
@@ -31,12 +31,20 @@ export interface PendingDecision {
 }
 
 export const planInputSchema = z.object({
-  action: z.enum(['create', 'decide', 'update_status', 'add_note', 'add_step', 'view']).describe('What to do'),
+  action: z
+    .enum(['create', 'decide', 'update_status', 'add_note', 'add_step', 'view'])
+    .describe('What to do'),
   title: z.string().optional().describe('Plan title (when creating)'),
   steps: z.array(z.string()).optional().describe('List of step names (when creating)'),
-  decision: z.enum(['delegate', 'proceed']).optional().describe('For large plans: delegate to sub-agent or proceed yourself'),
+  decision: z
+    .enum(['delegate', 'proceed'])
+    .optional()
+    .describe('For large plans: delegate to sub-agent or proceed yourself'),
   stepName: z.string().optional().describe('Which step to update'),
-  status: z.enum(['pending', 'in_progress', 'completed', 'blocked']).optional().describe('New status for the step'),
+  status: z
+    .enum(['pending', 'in_progress', 'completed', 'blocked'])
+    .optional()
+    .describe('New status for the step'),
   note: z.string().optional().describe('Note to attach to a step'),
 });
 

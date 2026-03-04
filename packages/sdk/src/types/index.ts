@@ -1,19 +1,11 @@
 /**
- * @fileoverview Type exports for @agntk/core
+ * @fileoverview SDK public type definitions.
+ * Exports core types for agents, tools, and lifecycle management.
  */
 
-// Agent configuration types
-export type {
-  AgentOptions,
-  Agent,
-  AgentStreamResult,
-} from './agent';
+export type { AgentOptions, Agent, AgentStreamResult } from './agent';
 
-// Tool lifecycle types
-export {
-  ToolErrorType,
-  ToolError,
-} from './lifecycle';
+export { ToolErrorType, ToolError } from './lifecycle';
 
 export type {
   ToolLifecycle,

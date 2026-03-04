@@ -9,7 +9,6 @@ import { success, error } from '../utils/tool-result';
 
 const log = createLogger('@agntk/core:glob');
 
-// Get config values with fallbacks
 function getGlobConfig() {
   const config = getToolConfig<{
     timeout?: number;
@@ -29,14 +28,8 @@ const globInputSchema = z.object({
     .string()
     .optional()
     .describe('Directory to search in. Defaults to current working directory.'),
-  maxDepth: z
-    .number()
-    .optional()
-    .describe('Maximum directory depth to search'),
-  hidden: z
-    .boolean()
-    .optional()
-    .describe('Include hidden files and directories'),
+  maxDepth: z.number().optional().describe('Maximum directory depth to search'),
+  hidden: z.boolean().optional().describe('Include hidden files and directories'),
 });
 
 export const globTool = tool({
@@ -67,7 +60,11 @@ export const globTool = tool({
       }
 
       const output = formatGlobResult(result);
-      log.info('glob complete', { pattern: args.pattern, files: result.totalFiles, truncated: result.truncated });
+      log.info('glob complete', {
+        pattern: args.pattern,
+        files: result.totalFiles,
+        truncated: result.truncated,
+      });
 
       return success({
         output,

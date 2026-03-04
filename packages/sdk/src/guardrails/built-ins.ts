@@ -1,32 +1,30 @@
-/**
- * @fileoverview Built-in guardrails for common validation patterns.
- */
-
 import type { Guardrail } from './types';
 
-// ============================================================================
-// PII / Content Filter
-// ============================================================================
-
-/** Common PII patterns. */
 const PII_PATTERNS: Array<{ name: string; pattern: RegExp; replacement: string }> = [
   { name: 'SSN', pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: '[SSN REDACTED]' },
-  { name: 'credit card', pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, replacement: '[CC REDACTED]' },
-  { name: 'email', pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, replacement: '[EMAIL REDACTED]' },
-  { name: 'phone', pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, replacement: '[PHONE REDACTED]' },
+  {
+    name: 'credit card',
+    pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+    replacement: '[CC REDACTED]',
+  },
+  {
+    name: 'email',
+    pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+    replacement: '[EMAIL REDACTED]',
+  },
+  {
+    name: 'phone',
+    pattern: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+    replacement: '[PHONE REDACTED]',
+  },
 ];
 
-/**
- * Content filter that detects and optionally redacts PII.
- * Blocks content containing SSNs, credit cards, emails, or phone numbers.
- *
- * @param options.redact - If true, provides a `filtered` version with PII replaced. Default: true.
- * @param options.patterns - Additional patterns to match (appended to built-in set).
- */
-export function contentFilter(options: {
-  redact?: boolean;
-  patterns?: Array<{ name: string; pattern: RegExp; replacement: string }>;
-} = {}): Guardrail {
+export function contentFilter(
+  options: {
+    redact?: boolean;
+    patterns?: Array<{ name: string; pattern: RegExp; replacement: string }>;
+  } = {},
+): Guardrail {
   const { redact = true, patterns: extra = [] } = options;
   const allPatterns = [...PII_PATTERNS, ...extra];
 
@@ -37,7 +35,6 @@ export function contentFilter(options: {
       let filtered = text;
 
       for (const { name, pattern, replacement } of allPatterns) {
-        // Reset lastIndex for global regex
         pattern.lastIndex = 0;
         if (pattern.test(text)) {
           found.push(name);
@@ -62,16 +59,6 @@ export function contentFilter(options: {
   };
 }
 
-// ============================================================================
-// Topic Filter
-// ============================================================================
-
-/**
- * Topic filter that blocks content matching specified forbidden topics.
- * Uses keyword matching against a blocklist.
- *
- * @param blockedTopics - List of forbidden topic keywords or patterns.
- */
 export function topicFilter(blockedTopics: Array<string | RegExp>): Guardrail {
   const matchers = blockedTopics.map((topic) =>
     typeof topic === 'string' ? new RegExp(`\\b${escapeRegex(topic)}\\b`, 'i') : topic,
@@ -85,8 +72,16 @@ export function topicFilter(blockedTopics: Array<string | RegExp>): Guardrail {
 
       for (let i = 0; i < matchers.length; i++) {
         matchers[i].lastIndex = 0;
-        if (matchers[i].test(text) || (typeof blockedTopics[i] === 'string' && textLower.includes((blockedTopics[i] as string).toLowerCase()))) {
-          matched.push(typeof blockedTopics[i] === 'string' ? (blockedTopics[i] as string) : String(blockedTopics[i]));
+        if (
+          matchers[i].test(text) ||
+          (typeof blockedTopics[i] === 'string' &&
+            textLower.includes((blockedTopics[i] as string).toLowerCase()))
+        ) {
+          matched.push(
+            typeof blockedTopics[i] === 'string'
+              ? (blockedTopics[i] as string)
+              : String(blockedTopics[i]),
+          );
         }
       }
 
@@ -107,20 +102,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// ============================================================================
-// Length Limit
-// ============================================================================
-
-/**
- * Length limit guardrail that blocks content exceeding a character or word count.
- *
- * @param options.maxChars - Maximum character count. Default: no limit.
- * @param options.maxWords - Maximum word count. Default: no limit.
- */
-export function lengthLimit(options: {
-  maxChars?: number;
-  maxWords?: number;
-}): Guardrail {
+export function lengthLimit(options: { maxChars?: number; maxWords?: number }): Guardrail {
   const { maxChars, maxWords } = options;
 
   return {
@@ -151,16 +133,6 @@ export function lengthLimit(options: {
   };
 }
 
-// ============================================================================
-// Custom Guardrail Factory
-// ============================================================================
-
-/**
- * Create a custom guardrail from a function.
- *
- * @param name - Unique name for the guardrail.
- * @param checkFn - Function that returns true/false or a full GuardrailResult.
- */
 export function custom(
   name: string,
   checkFn: (text: string) => boolean | { passed: boolean; message?: string; filtered?: string },

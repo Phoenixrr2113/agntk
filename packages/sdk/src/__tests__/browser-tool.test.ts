@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the Browser tool.
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   buildCommand,
@@ -14,11 +10,6 @@ import {
   BROWSER_ACTIONS,
   BROWSER_TOOL_DESCRIPTION,
 } from '../tools/browser/types';
-import type { BrowserInput } from '../tools/browser/types';
-
-// ============================================================================
-// Mock child_process
-// ============================================================================
 
 vi.mock('node:child_process', () => ({
   execFile: vi.fn(),
@@ -28,31 +19,28 @@ import { execFile } from 'node:child_process';
 
 function mockExecFile(stdout: string, stderr = '', exitCode = 0) {
   const mock = execFile as unknown as ReturnType<typeof vi.fn>;
-  mock.mockImplementation((_cmd: string, _args: string[], _opts: unknown, cb?: Function) => {
-    // promisify passes (cmd, args, opts) — callback is 4th arg
-    if (typeof _opts === 'function') {
-      const callback = _opts;
-      if (exitCode !== 0) {
-        const err = Object.assign(new Error(stderr), { stdout, stderr, code: exitCode });
-        callback(err, stdout, stderr);
-      } else {
-        callback(null, { stdout, stderr });
+  mock.mockImplementation(
+    (_cmd: string, _args: string[], _opts: unknown, cb?: (...args: unknown[]) => unknown) => {
+      if (typeof _opts === 'function') {
+        const callback = _opts;
+        if (exitCode !== 0) {
+          const err = Object.assign(new Error(stderr), { stdout, stderr, code: exitCode });
+          callback(err, stdout, stderr);
+        } else {
+          callback(null, { stdout, stderr });
+        }
+      } else if (typeof cb === 'function') {
+        if (exitCode !== 0) {
+          const err = Object.assign(new Error(stderr), { stdout, stderr, code: exitCode });
+          cb(err, stdout, stderr);
+        } else {
+          cb(null, { stdout, stderr });
+        }
       }
-    } else if (typeof cb === 'function') {
-      if (exitCode !== 0) {
-        const err = Object.assign(new Error(stderr), { stdout, stderr, code: exitCode });
-        cb(err, stdout, stderr);
-      } else {
-        cb(null, { stdout, stderr });
-      }
-    }
-    return {} as any;
-  });
+      return {} as any;
+    },
+  );
 }
-
-// ============================================================================
-// buildCommand
-// ============================================================================
 
 describe('buildCommand', () => {
   it('builds open command', () => {
@@ -191,7 +179,6 @@ describe('buildCommand', () => {
     expect(args).toEqual(['close']);
   });
 
-  // Config flags
   it('includes session flag from config', () => {
     const args = buildCommand({ action: 'open', url: 'https://x.com' }, { session: 'my-session' });
     expect(args).toContain('--session');
@@ -199,7 +186,10 @@ describe('buildCommand', () => {
   });
 
   it('includes CDP URL flag from config', () => {
-    const args = buildCommand({ action: 'open', url: 'https://x.com' }, { cdpUrl: 'ws://localhost:9222' });
+    const args = buildCommand(
+      { action: 'open', url: 'https://x.com' },
+      { cdpUrl: 'ws://localhost:9222' },
+    );
     expect(args).toContain('--cdp');
     expect(args).toContain('ws://localhost:9222');
   });
@@ -209,10 +199,6 @@ describe('buildCommand', () => {
     expect(args).toContain('--no-headless');
   });
 });
-
-// ============================================================================
-// browserInputSchema
-// ============================================================================
 
 describe('browserInputSchema', () => {
   it('validates open action', () => {
@@ -271,13 +257,10 @@ describe('browserInputSchema', () => {
   });
 });
 
-// ============================================================================
-// isBrowserCliAvailable
-// ============================================================================
-
 describe('isBrowserCliAvailable', () => {
   beforeEach(() => {
     resetCliAvailability();
+    (execFile as unknown as ReturnType<typeof vi.fn>).mockClear();
   });
 
   afterEach(() => {
@@ -293,11 +276,13 @@ describe('isBrowserCliAvailable', () => {
 
   it('returns false when CLI is not found', async () => {
     const mock = execFile as unknown as ReturnType<typeof vi.fn>;
-    mock.mockImplementation((_cmd: string, _args: string[], _opts: unknown, cb?: Function) => {
-      const callback = typeof _opts === 'function' ? _opts : cb;
-      if (callback) callback(new Error('not found'));
-      return {} as any;
-    });
+    mock.mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb?: (...args: unknown[]) => unknown) => {
+        const callback = typeof _opts === 'function' ? _opts : cb;
+        if (callback) callback(new Error('not found'));
+        return {} as any;
+      },
+    );
 
     const available = await isBrowserCliAvailable();
     expect(available).toBe(false);
@@ -307,15 +292,11 @@ describe('isBrowserCliAvailable', () => {
     mockExecFile('/usr/local/bin/agent-browser');
     await isBrowserCliAvailable();
     await isBrowserCliAvailable();
-    // Only called once for `which` + cached
+
     const mock = execFile as unknown as ReturnType<typeof vi.fn>;
     expect(mock).toHaveBeenCalledTimes(1);
   });
 });
-
-// ============================================================================
-// Constants & Exports
-// ============================================================================
 
 describe('browser tool exports', () => {
   it('exports BROWSER_ACTIONS array', () => {
@@ -335,10 +316,6 @@ describe('browser tool exports', () => {
   });
 });
 
-// ============================================================================
-// createBrowserTool
-// ============================================================================
-
 describe('createBrowserTool', () => {
   beforeEach(() => {
     resetCliAvailability();
@@ -356,11 +333,13 @@ describe('createBrowserTool', () => {
 
   it('returns error when CLI is not available', async () => {
     const mock = execFile as unknown as ReturnType<typeof vi.fn>;
-    mock.mockImplementation((_cmd: string, _args: string[], _opts: unknown, cb?: Function) => {
-      const callback = typeof _opts === 'function' ? _opts : cb;
-      if (callback) callback(new Error('not found'));
-      return {} as any;
-    });
+    mock.mockImplementation(
+      (_cmd: string, _args: string[], _opts: unknown, cb?: (...args: unknown[]) => unknown) => {
+        const callback = typeof _opts === 'function' ? _opts : cb;
+        if (callback) callback(new Error('not found'));
+        return {} as any;
+      },
+    );
 
     const tool = createBrowserTool();
     const result = await tool.execute!({ action: 'open', url: 'https://example.com' }, {} as any);
@@ -379,13 +358,8 @@ describe('createBrowserTool', () => {
   });
 });
 
-// ============================================================================
-// Preset Integration
-// ============================================================================
-
 describe('browser tool in presets', () => {
   it('is listed in full preset tools', async () => {
-    // Dynamic import to test the preset definition
     const { toolPresets } = await import('../presets/tools');
     expect(toolPresets.full.tools).toContain('browser');
   });

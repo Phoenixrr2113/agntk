@@ -7,28 +7,10 @@ export {
   resetCliAvailability,
 } from './tool';
 
-export type {
-  BrowserInput,
-  BrowserAction,
-  BrowserResult,
-  BrowserConfig,
-} from './types';
+export type { BrowserInput, BrowserAction, BrowserResult, BrowserConfig } from './types';
 
-export {
-  browserInputSchema,
-  BROWSER_ACTIONS,
-  BROWSER_TOOL_DESCRIPTION,
-} from './types';
+export { browserInputSchema, BROWSER_ACTIONS, BROWSER_TOOL_DESCRIPTION } from './types';
 
-// Streaming
-export {
-  BrowserStreamEmitter,
-  createBrowserStream,
-} from './stream';
+export { BrowserStreamEmitter, createBrowserStream } from './stream';
 
-export type {
-  BrowserStreamConfig,
-  FrameData,
-  InputEvent,
-  BrowserStreamEvent,
-} from './stream';
+export type { BrowserStreamConfig, FrameData, InputEvent, BrowserStreamEvent } from './stream';

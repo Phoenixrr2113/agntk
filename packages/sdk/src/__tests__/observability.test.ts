@@ -1,17 +1,9 @@
-/**
- * @fileoverview Tests for the Observability module.
- */
-
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createTelemetrySettings,
   isObservabilityEnabled,
   initObservability,
 } from '../observability/langfuse';
-
-// ============================================================================
-// createTelemetrySettings
-// ============================================================================
 
 describe('createTelemetrySettings', () => {
   it('returns disabled settings when not initialized', () => {
@@ -32,19 +24,11 @@ describe('createTelemetrySettings', () => {
   });
 });
 
-// ============================================================================
-// isObservabilityEnabled
-// ============================================================================
-
 describe('isObservabilityEnabled', () => {
   it('returns false before initialization', () => {
     expect(isObservabilityEnabled()).toBe(false);
   });
 });
-
-// ============================================================================
-// initObservability
-// ============================================================================
 
 describe('initObservability', () => {
   it('returns false for unsupported provider', async () => {
@@ -53,7 +37,6 @@ describe('initObservability', () => {
   });
 
   it('gracefully handles missing langfuse package', async () => {
-    // Without langfuse installed, should return false (graceful degradation)
     const result = await initObservability({
       provider: 'langfuse',
       langfuse: {
@@ -61,17 +44,15 @@ describe('initObservability', () => {
         secretKey: 'sk-test',
       },
     });
-    // Will fail because langfuse-vercel is not installed
+
     expect(result).toBe(false);
   });
 
   it('returns false when keys are missing', async () => {
-    // Mock the import to simulate langfuse being installed but keys missing
     vi.doMock('langfuse-vercel', () => ({
       LangfuseExporter: class MockExporter {},
     }));
 
-    // Keys not provided and env vars not set — should return false
     const result = await initObservability({
       provider: 'langfuse',
     });
@@ -80,10 +61,6 @@ describe('initObservability', () => {
     vi.doUnmock('langfuse-vercel');
   });
 });
-
-// ============================================================================
-// Type safety
-// ============================================================================
 
 describe('ObservabilityConfig type', () => {
   it('accepts valid config', () => {

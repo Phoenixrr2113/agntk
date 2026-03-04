@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the tool approval system.
- */
-
 import { describe, it, expect, vi } from 'vitest';
 import type { Tool, ToolSet } from 'ai';
 import { tool } from 'ai';
@@ -34,10 +30,6 @@ import {
   type ApprovalConfig,
 } from '../tools/approval';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function createMockTool(name = 'test'): Tool {
   return tool({
     description: `Mock ${name} tool`,
@@ -45,10 +37,6 @@ function createMockTool(name = 'test'): Tool {
     execute: async ({ input }) => `Executed ${name}: ${input ?? 'none'}`,
   });
 }
-
-// ============================================================================
-// isDangerousTool
-// ============================================================================
 
 describe('isDangerousTool', () => {
   it('should identify default dangerous tools', () => {
@@ -72,10 +60,6 @@ describe('isDangerousTool', () => {
   });
 });
 
-// ============================================================================
-// DANGEROUS_TOOLS constant
-// ============================================================================
-
 describe('DANGEROUS_TOOLS', () => {
   it('should contain expected tools', () => {
     expect(DANGEROUS_TOOLS.has('shell')).toBe(true);
@@ -90,10 +74,6 @@ describe('DANGEROUS_TOOLS', () => {
   });
 });
 
-// ============================================================================
-// wrapToolWithApproval
-// ============================================================================
-
 describe('wrapToolWithApproval', () => {
   it('should add needsApproval: true without handler', () => {
     const mockTool = createMockTool('shell');
@@ -104,7 +84,7 @@ describe('wrapToolWithApproval', () => {
   it('should preserve tool execute function', async () => {
     const mockTool = createMockTool('shell');
     const wrapped = wrapToolWithApproval('shell', mockTool, { enabled: true });
-    // Tool should still be callable
+
     expect(wrapped.execute).toBeDefined();
   });
 
@@ -116,17 +96,19 @@ describe('wrapToolWithApproval', () => {
       handler,
     });
 
-    // needsApproval should be a function
     const needsApproval = (wrapped as Record<string, unknown>).needsApproval;
     expect(typeof needsApproval).toBe('function');
 
-    // Call the approval function
-    const result = await (needsApproval as (input: unknown) => Promise<boolean>)({ cmd: 'rm -rf /' });
+    const result = await (needsApproval as (input: unknown) => Promise<boolean>)({
+      cmd: 'rm -rf /',
+    });
     expect(result).toBe(true);
-    expect(handler).toHaveBeenCalledWith(expect.objectContaining({
-      toolName: 'shell',
-      input: { cmd: 'rm -rf /' },
-    }));
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toolName: 'shell',
+        input: { cmd: 'rm -rf /' },
+      }),
+    );
   });
 
   it('should deny on timeout when timeoutAction is deny', async () => {
@@ -141,7 +123,9 @@ describe('wrapToolWithApproval', () => {
       timeoutAction: 'deny',
     });
 
-    const needsApproval = (wrapped as Record<string, unknown>).needsApproval as (input: unknown) => Promise<boolean>;
+    const needsApproval = (wrapped as Record<string, unknown>).needsApproval as (
+      input: unknown,
+    ) => Promise<boolean>;
     const result = await needsApproval({ cmd: 'test' });
     expect(result).toBe(false);
   });
@@ -158,15 +142,13 @@ describe('wrapToolWithApproval', () => {
       timeoutAction: 'approve',
     });
 
-    const needsApproval = (wrapped as Record<string, unknown>).needsApproval as (input: unknown) => Promise<boolean>;
+    const needsApproval = (wrapped as Record<string, unknown>).needsApproval as (
+      input: unknown,
+    ) => Promise<boolean>;
     const result = await needsApproval({ cmd: 'test' });
     expect(result).toBe(true);
   });
 });
-
-// ============================================================================
-// applyApproval
-// ============================================================================
 
 describe('applyApproval', () => {
   it('should not modify tools when disabled', () => {
@@ -219,10 +201,6 @@ describe('applyApproval', () => {
   });
 });
 
-// ============================================================================
-// resolveApprovalConfig
-// ============================================================================
-
 describe('resolveApprovalConfig', () => {
   it('should return undefined for falsy input', () => {
     expect(resolveApprovalConfig(undefined)).toBeUndefined();
@@ -243,10 +221,6 @@ describe('resolveApprovalConfig', () => {
     expect(resolveApprovalConfig(input)).toBe(input);
   });
 });
-
-// ============================================================================
-// Integration with agent.ts
-// ============================================================================
 
 describe('agent approval integration', () => {
   it('should accept approval: true in createAgent', async () => {

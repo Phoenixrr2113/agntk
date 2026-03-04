@@ -27,6 +27,10 @@ cat error.log | npx agntk "explain these errors and suggest fixes"
 
 # List your agents
 npx agntk list
+
+# Inspect or manage an agent
+npx agntk info coder
+npx agntk clean
 ```
 
 That's it. No config files. No API key setup (unless you want to). It reads your files, runs commands, browses the web, spawns sub-agents, and remembers what it learns.
@@ -52,11 +56,11 @@ Out of the box, every agent has 20+ built-in tools:
 
 agntk auto-detects the best available AI provider:
 
-| Priority | Provider | How it's detected |
-|----------|----------|-------------------|
-| 1 | **Your API key** | `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or `CEREBRAS_API_KEY` in env |
-| 2 | **Ollama** | Auto-detected at `localhost:11434` — picks the right model for your hardware |
-| 3 | **Free tier** | Built-in, no setup — backed by Cerebras (rate-limited) |
+| Priority | Provider         | How it's detected                                                            |
+| -------- | ---------------- | ---------------------------------------------------------------------------- |
+| 1        | **Your API key** | `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or `CEREBRAS_API_KEY` in env         |
+| 2        | **Ollama**       | Auto-detected at `localhost:11434` — picks the right model for your hardware |
+| 3        | **Free tier**    | Built-in, no setup — backed by Cerebras (rate-limited)                       |
 
 ```bash
 # Use your own key for unlimited access (recommended)
@@ -78,19 +82,35 @@ agntk "prompt"                    Run a one-shot task
 agntk -n <name> "prompt"          Named agent (persistent memory)
 agntk -n <name> -i                Interactive REPL
 agntk list                        List all agents
+agntk info <name>                 Show agent details
+agntk delete <name>               Delete an agent's state
+agntk stop <name>                 Stop a running agent
+agntk clean                       Interactively remove stale agents
 ```
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--name` | `-n` | Agent name (enables persistent memory) |
-| `--instructions` | | Custom system prompt |
-| `--interactive` | `-i` | Interactive REPL mode |
-| `--workspace` | | Workspace root (default: current directory) |
-| `--max-steps` | | Max tool-loop steps (default: 25) |
-| `--verbose` | | Show full tool args and output |
-| `--quiet` | `-q` | Text output only (for piping) |
-| `--version` | `-v` | Show version |
-| `--help` | `-h` | Show help |
+### Options
+
+| Flag             | Short | Description                                 |
+| ---------------- | ----- | ------------------------------------------- |
+| `--name`         | `-n`  | Agent name (enables persistent memory)      |
+| `--instructions` |       | Custom system prompt                        |
+| `--interactive`  | `-i`  | Interactive REPL mode                       |
+| `--workspace`    |       | Workspace root (default: current directory) |
+| `--max-steps`    |       | Max tool-loop steps (default: unlimited)    |
+| `--verbose`      |       | Show full tool args and output              |
+| `--quiet`        | `-q`  | Text output only (for piping)               |
+| `--version`      | `-v`  | Show version                                |
+| `--help`         | `-h`  | Show help                                   |
+
+### Agent Management
+
+| Command         | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| `list`          | Show all agents with status (running/idle) and last active time             |
+| `info <name>`   | Agent details — memory files, workspace, sub-agents, token usage, disk size |
+| `delete <name>` | Delete an agent's state directory (with confirmation)                       |
+| `stop <name>`   | Send SIGTERM to a running agent; SIGKILL if it doesn't exit                 |
+| `clean`         | Interactive picker to bulk-delete idle agents                               |
 
 ### Examples
 
@@ -110,6 +130,11 @@ npx agntk "review src/ for security issues and suggest fixes"
 # Pipe anything
 git diff | npx agntk "write a commit message for this diff"
 cat package.json | npx agntk "are any of these dependencies outdated?"
+
+# Agent management
+npx agntk info coder
+npx agntk delete old-agent
+npx agntk clean
 ```
 
 ---
@@ -131,14 +156,14 @@ npx agntk list
 
 Memory is stored at `~/.agntk/agents/{name}/` as plain markdown files:
 
-| File | Description |
-|------|-------------|
-| `memory.md` | Agent-curated facts about your project |
-| `context.md` | Session context the agent rewrites as it learns |
-| `decisions.md` | Append-only log of decisions made |
-| `preferences.md` | Cross-project preferences |
-| `identity.md` | Human-authored identity (you can edit this) |
-| `project.md` | Human-authored project context |
+| Path                    | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `memory/memory.md`      | Agent-curated facts about your project          |
+| `memory/decisions.md`   | Append-only log of decisions made               |
+| `memory/preferences.md` | Cross-project preferences                       |
+| `memory/identity.md`    | Human-authored identity (you can edit this)     |
+| `memory/project.md`     | Human-authored project context                  |
+| `context.md`            | Session context the agent rewrites as it learns |
 
 ---
 
@@ -146,11 +171,11 @@ Memory is stored at `~/.agntk/agents/{name}/` as plain markdown files:
 
 When Ollama is detected, agntk checks your hardware and picks the largest model your system can run comfortably:
 
-| Your RAM | Model Selected | Why |
-|----------|---------------|-----|
-| 8 GB | `qwen3:8b` for everything | Fits in memory with room for OS |
-| 16 GB | `qwen3:14b` standard, `qwen3:8b` fast | Best balance of quality and speed |
-| 32+ GB | `qwen3:32b` reasoning, `qwen3:14b` standard | Full power for complex tasks |
+| Your RAM | Model Selected                              | Why                               |
+| -------- | ------------------------------------------- | --------------------------------- |
+| 8 GB     | `qwen3:8b` for everything                   | Fits in memory with room for OS   |
+| 16 GB    | `qwen3:14b` standard, `qwen3:8b` fast       | Best balance of quality and speed |
+| 32+ GB   | `qwen3:32b` reasoning, `qwen3:14b` standard | Full power for complex tasks      |
 
 Apple Silicon unified memory, NVIDIA VRAM, and CPU-only systems are all detected automatically. The agent tells you what it picked:
 
@@ -183,14 +208,14 @@ for await (const chunk of result.fullStream) {
 
 ### Packages
 
-| Package | Description |
-|---------|-------------|
-| `agntk` | CLI — `npx agntk` entry point |
-| `@agntk/core` | Agent factory — tools, streaming, memory, sub-agents, hooks |
-| `@agntk/cli` | CLI implementation |
-| `@agntk/server` | HTTP server — REST + SSE + WebSocket endpoints |
-| `@agntk/client` | Client library — HTTP, SSE, WebSocket |
-| `@agntk/logger` | Structured logging with namespace filtering |
+| Package         | Description                                                 |
+| --------------- | ----------------------------------------------------------- |
+| `agntk`         | CLI — `npx agntk` entry point                               |
+| `@agntk/core`   | Agent factory — tools, streaming, memory, sub-agents, hooks |
+| `@agntk/cli`    | CLI implementation                                          |
+| `@agntk/server` | HTTP server — REST + SSE + WebSocket endpoints              |
+| `@agntk/client` | Client library — HTTP, SSE, WebSocket                       |
+| `@agntk/logger` | Structured logging with namespace filtering                 |
 
 ### Custom Tools
 
@@ -213,12 +238,12 @@ Custom tools are merged with the 20+ built-in tools.
 
 Every provider has 4 model tiers. Override via environment variables:
 
-| Tier | Purpose | Env Override |
-|------|---------|-------------|
-| `fast` | Quick responses, low cost | `AGENT_SDK_MODEL_FAST` |
-| `standard` | Balanced quality/cost | `AGENT_SDK_MODEL_STANDARD` |
-| `reasoning` | Complex logic, planning | `AGENT_SDK_MODEL_REASONING` |
-| `powerful` | Best quality, highest cost | `AGENT_SDK_MODEL_POWERFUL` |
+| Tier        | Purpose                    | Env Override                |
+| ----------- | -------------------------- | --------------------------- |
+| `fast`      | Quick responses, low cost  | `AGENT_SDK_MODEL_FAST`      |
+| `standard`  | Balanced quality/cost      | `AGENT_SDK_MODEL_STANDARD`  |
+| `reasoning` | Complex logic, planning    | `AGENT_SDK_MODEL_REASONING` |
+| `powerful`  | Best quality, highest cost | `AGENT_SDK_MODEL_POWERFUL`  |
 
 ### Server & Client
 
@@ -240,7 +265,9 @@ Connect from anywhere:
 import { AgentHttpClient } from '@agntk/client';
 
 const client = new AgentHttpClient('http://localhost:3000');
-for await (const event of client.generateStream({ messages: [{ role: 'user', content: 'Hello' }] })) {
+for await (const event of client.generateStream({
+  messages: [{ role: 'user', content: 'Hello' }],
+})) {
   if (event.type === 'text-delta') process.stdout.write(event.textDelta);
 }
 ```

@@ -1,9 +1,3 @@
-/**
- * @fileoverview End-to-end tests for full agent lifecycle scenarios.
- * Tests complete workflows from agent creation through streaming to final output.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect } from 'vitest';
 import { createAgent } from '@agntk/core';
 import { createMockModel } from './setup';
@@ -22,8 +16,11 @@ describe('E2E: Agent Lifecycle', () => {
 
       const result = await agent.stream({ prompt: 'Get user profile' });
       expect(result.text).toBeDefined();
-      // Drain the stream before reading text
-      for await (const _chunk of result.fullStream) { /* drain */ }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
       expect(typeof text).toBe('string');
     });

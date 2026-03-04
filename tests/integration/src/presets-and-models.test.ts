@@ -1,40 +1,8 @@
-/**
- * @fileoverview Integration tests for model configuration and sub-agent configs.
- */
-
 import { describe, it, expect } from 'vitest';
-import {
-  createAgent,
-  resolveModel,
-} from '@agntk/core';
-import { subAgentConfigs, getSubAgentConfig } from '@agntk/core/advanced';
+import { createAgent } from '@agntk/core';
 import { createMockModel } from './setup';
 
 describe('Models & Agent Config', () => {
-  describe('subAgentConfigs', () => {
-    it('should export sub-agent configurations', () => {
-      expect(subAgentConfigs).toBeDefined();
-      expect(typeof subAgentConfigs).toBe('object');
-    });
-
-    it('should have sub-agent roles defined', () => {
-      const roles = Object.keys(subAgentConfigs);
-      expect(roles.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getSubAgentConfig', () => {
-    it('should return config for known roles', () => {
-      const config = getSubAgentConfig('coder');
-      expect(config).toBeDefined();
-    });
-
-    it('should return generic config for unknown roles', () => {
-      const config = getSubAgentConfig('unknown-role' as any);
-      expect(config).toBeDefined();
-    });
-  });
-
   describe('createAgent with different configs', () => {
     it('should create agent with name only', () => {
       const agent = createAgent({

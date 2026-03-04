@@ -71,7 +71,7 @@ export const DEFAULT_MAX_MATCHES = 500;
 function isValidBinary(filePath: string): boolean {
   try {
     return statSync(filePath).size > 10000;
-  } catch (_e: unknown) {
+  } catch {
     return false;
   }
 }
@@ -111,21 +111,18 @@ export function findSgCliPath(): string | null {
 
   const binaryName = process.platform === 'win32' ? 'sg.exe' : 'sg';
 
-  // Check cached binary first (from downloader)
   const cachedPath = getCachedBinaryPath();
   if (cachedPath && isValidBinary(cachedPath)) {
     cachedCliPath = cachedPath;
     return cachedPath;
   }
 
-  // Check agent data directory
   const agentBinPath = join(getDataDir(), 'agent', 'bin', binaryName);
   if (existsSync(agentBinPath) && isValidBinary(agentBinPath)) {
     cachedCliPath = agentBinPath;
     return agentBinPath;
   }
 
-  // Check @ast-grep/cli npm package
   try {
     const require = createRequire(import.meta.url);
     const cliPkgPath = require.resolve('@ast-grep/cli/package.json');
@@ -136,11 +133,10 @@ export function findSgCliPath(): string | null {
       cachedCliPath = sgPath;
       return sgPath;
     }
-  } catch (_e: unknown) {
-    // @ast-grep/cli not installed
+  } catch {
+    void 0;
   }
 
-  // Check platform-specific npm package
   const platformPkg = getPlatformPackageName();
   if (platformPkg) {
     try {
@@ -154,12 +150,11 @@ export function findSgCliPath(): string | null {
         cachedCliPath = binaryPath;
         return binaryPath;
       }
-    } catch (_e: unknown) {
-      // Platform-specific package not installed
+    } catch {
+      void 0;
     }
   }
 
-  // Check homebrew paths on macOS
   if (process.platform === 'darwin') {
     const homebrewPaths = ['/opt/homebrew/bin/sg', '/usr/local/bin/sg'];
     for (const path of homebrewPaths) {
@@ -170,7 +165,6 @@ export function findSgCliPath(): string | null {
     }
   }
 
-  // Check system PATH
   try {
     const isWindows = process.platform === 'win32';
     const cmd = isWindows ? 'where' : 'which';
@@ -182,8 +176,8 @@ export function findSgCliPath(): string | null {
         return path;
       }
     }
-  } catch (_e: unknown) {
-    // sg not in PATH
+  } catch {
+    void 0;
   }
 
   return null;
@@ -201,7 +195,6 @@ export function setSgCliPath(path: string): void {
 export function resetCliCache(): void {
   cachedCliPath = null;
 }
-
 
 export interface EnvironmentCheckResult {
   cli: {
@@ -241,7 +234,6 @@ export function checkEnvironment(): EnvironmentCheckResult {
     result.cli.error = `Binary not found: ${cliPath}`;
   }
 
-  // Check NAPI availability
   try {
     createRequire(import.meta.url)('@ast-grep/napi');
     result.napi.available = true;

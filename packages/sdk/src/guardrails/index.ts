@@ -1,7 +1,3 @@
-/**
- * @fileoverview Guardrails module public API.
- */
-
 export type {
   Guardrail,
   GuardrailResult,
@@ -12,4 +8,9 @@ export type {
 export { GuardrailBlockedError } from './types';
 
 export { contentFilter, topicFilter, lengthLimit, custom } from './built-ins';
-export { runGuardrails, handleGuardrailResults, buildRetryFeedback, wrapWithGuardrails } from './runner';
+export {
+  runGuardrails,
+  handleGuardrailResults,
+  buildRetryFeedback,
+  wrapWithGuardrails,
+} from './runner';

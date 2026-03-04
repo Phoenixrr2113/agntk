@@ -1,11 +1,14 @@
-/**
- * @agntk/core - MarkdownMemoryStore
- *
- * File-based MemoryStore implementation that reads/writes .agntk/ markdown files.
- * Zero dependencies beyond Node.js built-ins.
- */
-
-import { readFile, writeFile, appendFile, mkdir } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  appendFile,
+  mkdir,
+  readdir,
+  rename,
+  symlink,
+  unlink,
+  readlink,
+} from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -14,41 +17,35 @@ import type { MemoryStore } from './types';
 
 const log = createLogger('@agntk/core:memory-store');
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const PROJECT_DIR_DEFAULT = '.agntk';
 const GLOBAL_DIR_DEFAULT = '.agntk';
+
+const DIRS = {
+  memory: 'memory',
+  workspace: 'workspace',
+  archive: 'archive',
+} as const;
 
 const FILES = {
   identity: 'identity.md',
   preferences: 'preferences.md',
   project: 'project.md',
-  memory: 'memory.md',
   context: 'context.md',
   decisions: 'decisions.md',
 } as const;
 
-/** Fallback project context files (checked in order) */
 const PROJECT_FALLBACKS = ['CLAUDE.md', 'AGENTS.md'] as const;
 
-// ============================================================================
-// MarkdownMemoryStore
-// ============================================================================
+const CURRENT_SYMLINK = 'current';
 
 export interface MarkdownMemoryStoreOptions {
-  /** Project-local memory directory. Default: '.agntk' (relative to workspaceRoot) */
   projectDir?: string;
-  /** Global memory directory. Default: '~/.agntk' */
+
   globalDir?: string;
-  /** Workspace root for resolving project directory. Default: process.cwd() */
+
   workspaceRoot?: string;
 }
 
-/**
- * Reads/writes markdown memory files from .agntk/ and ~/.agntk/ directories.
- */
 export class MarkdownMemoryStore implements MemoryStore {
   private readonly projectPath: string;
   private readonly globalPath: string;
@@ -60,8 +57,6 @@ export class MarkdownMemoryStore implements MemoryStore {
     this.globalPath = resolve(homedir(), options.globalDir ?? GLOBAL_DIR_DEFAULT);
   }
 
-  // ── Load methods ─────────────────────────────────────────────────────
-
   async loadIdentity(): Promise<string | null> {
     return this.readFileOrNull(join(this.globalPath, FILES.identity));
   }
@@ -71,11 +66,9 @@ export class MarkdownMemoryStore implements MemoryStore {
   }
 
   async loadProject(): Promise<string | null> {
-    // Try .agntk/project.md first
     const projectFile = await this.readFileOrNull(join(this.projectPath, FILES.project));
     if (projectFile) return projectFile;
 
-    // Fall back to CLAUDE.md or AGENTS.md in workspace root
     for (const fallback of PROJECT_FALLBACKS) {
       const content = await this.readFileOrNull(join(this.workspaceRoot, fallback));
       if (content) {
@@ -87,26 +80,16 @@ export class MarkdownMemoryStore implements MemoryStore {
     return null;
   }
 
-  async loadMemory(): Promise<string | null> {
-    return this.readFileOrNull(join(this.projectPath, FILES.memory));
-  }
-
   async loadContext(): Promise<string | null> {
     return this.readFileOrNull(join(this.projectPath, FILES.context));
   }
 
   async loadDecisions(): Promise<string | null> {
-    return this.readFileOrNull(join(this.projectPath, FILES.decisions));
+    return this.readFileOrNull(join(this.getMemoryPath(), FILES.decisions));
   }
-
-  // ── Save methods ─────────────────────────────────────────────────────
 
   async saveContext(content: string): Promise<void> {
     await this.writeFileSafe(join(this.projectPath, FILES.context), content);
-  }
-
-  async saveMemory(content: string): Promise<void> {
-    await this.writeFileSafe(join(this.projectPath, FILES.memory), content);
   }
 
   async savePreferences(content: string): Promise<void> {
@@ -114,26 +97,122 @@ export class MarkdownMemoryStore implements MemoryStore {
   }
 
   async appendDecision(entry: string): Promise<void> {
-    const filePath = join(this.projectPath, FILES.decisions);
-    await this.ensureDir(this.projectPath);
+    const filePath = join(this.getMemoryPath(), FILES.decisions);
+    await this.ensureDir(this.getMemoryPath());
     const separator = existsSync(filePath) ? '\n\n' : '';
     await appendFile(filePath, separator + entry, 'utf-8');
     log.debug('Decision appended', { path: filePath });
   }
 
-  // ── Utilities ────────────────────────────────────────────────────────
+  async listMemoryFiles(): Promise<string[]> {
+    const memoryDir = this.getMemoryPath();
+    if (!existsSync(memoryDir)) return [];
 
-  /** Get the resolved project directory path */
+    try {
+      const entries = await readdir(memoryDir);
+      return entries.filter((e) => e.endsWith('.md')).sort();
+    } catch {
+      return [];
+    }
+  }
+
+  async createTaskFolder(label: string): Promise<string> {
+    const workspaceDir = this.getWorkspacePath();
+    await this.ensureDir(workspaceDir);
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/:/g, '-')
+      .replace(/\.\d+Z$/, '')
+      .replace('T', 'T');
+    const safeLabel = label.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+    const folderName = `${timestamp}-${safeLabel}`;
+    const folderPath = join(workspaceDir, folderName);
+
+    await mkdir(folderPath, { recursive: true });
+
+    const symlinkPath = join(workspaceDir, CURRENT_SYMLINK);
+    try {
+      if (existsSync(symlinkPath)) {
+        await unlink(symlinkPath);
+      }
+      await symlink(folderPath, symlinkPath);
+    } catch (err) {
+      log.warn('Failed to create current symlink', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    log.info('Task folder created', { path: folderPath });
+    return folderPath;
+  }
+
+  async archiveTask(taskFolderName: string): Promise<void> {
+    const sourcePath = join(this.getWorkspacePath(), taskFolderName);
+    const destPath = join(this.getArchivePath(), taskFolderName);
+
+    if (!existsSync(sourcePath)) {
+      log.warn('Task folder not found for archival', { taskFolderName });
+      return;
+    }
+
+    await this.ensureDir(this.getArchivePath());
+    await rename(sourcePath, destPath);
+
+    const symlinkPath = join(this.getWorkspacePath(), CURRENT_SYMLINK);
+    try {
+      if (existsSync(symlinkPath)) {
+        const target = await readlink(symlinkPath);
+        if (target === sourcePath || target === taskFolderName) {
+          await unlink(symlinkPath);
+        }
+      }
+    } catch {
+      void 0;
+    }
+
+    log.info('Task archived', { from: sourcePath, to: destPath });
+  }
+
+  async getCurrentTaskPath(): Promise<string | null> {
+    const symlinkPath = join(this.getWorkspacePath(), CURRENT_SYMLINK);
+    try {
+      if (!existsSync(symlinkPath)) return null;
+      const target = await readlink(symlinkPath);
+
+      if (!existsSync(target)) return null;
+      return target;
+    } catch {
+      return null;
+    }
+  }
+
   getProjectPath(): string {
     return this.projectPath;
   }
 
-  /** Get the resolved global directory path */
   getGlobalPath(): string {
     return this.globalPath;
   }
 
-  // ── Private helpers ──────────────────────────────────────────────────
+  getMemoryPath(): string {
+    return join(this.projectPath, DIRS.memory);
+  }
+
+  getWorkspacePath(): string {
+    return join(this.projectPath, DIRS.workspace);
+  }
+
+  getArchivePath(): string {
+    return join(this.projectPath, DIRS.archive);
+  }
+
+  async ensureDirectories(): Promise<void> {
+    await this.ensureDir(this.getMemoryPath());
+    await this.ensureDir(this.getWorkspacePath());
+    await this.ensureDir(this.getArchivePath());
+    log.debug('Workspace directories ensured', { base: this.projectPath });
+  }
 
   private async readFileOrNull(filePath: string): Promise<string | null> {
     try {

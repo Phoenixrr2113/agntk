@@ -1,9 +1,12 @@
 /**
- * @fileoverview Configuration exports.
+ * @fileoverview Configuration module index.
+ * Exports types, schemas, and utilities for agent configuration.
+ *
+ * This entry point provides access to everything needed for
+ * defining, loading, and accessing configuration with type safety.
  */
 
 export {
-  // Schema types
   type AgentConfig,
   type PartialAgentConfig,
   type ModelsConfig,
@@ -20,7 +23,6 @@ export {
 } from './schema';
 
 export {
-  // Loader functions
   loadConfig,
   getConfig,
   configure,
@@ -33,7 +35,6 @@ export {
 } from './loader';
 
 export {
-  // Defaults
   DEFAULT_MODELS,
   DEFAULT_PROVIDER,
   DEFAULT_MAX_STEPS,

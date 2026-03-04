@@ -1,14 +1,12 @@
 /**
- * @agntk/core - File Tools
- *
- * Structured file operations: read, write, edit, create.
- * All operations are scoped to workspaceRoot for safety.
+ * @fileoverview Entry point for file manipulation tools.
+ * Exports tool creation functions for reading, writing, editing, and creating files.
  */
-
 export {
   createFileReadTool,
   createFileWriteTool,
   createFileEditTool,
   createFileCreateTool,
   createFileTools,
+  type FileToolOptions,
 } from './tools';

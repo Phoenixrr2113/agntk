@@ -1,8 +1,3 @@
-/**
- * @fileoverview Streaming agent example.
- * Demonstrates the stream-only API with various use cases.
- */
-
 import { createAgent } from '@agntk/core';
 
 async function basicStream() {
@@ -12,12 +7,10 @@ async function basicStream() {
     workspaceRoot: process.cwd(),
   });
 
-  // Stream a simple task
   const result = await agent.stream({
     prompt: 'Explain what this project does based on the package.json',
   });
 
-  // Process stream chunks
   for await (const chunk of result.fullStream) {
     switch (chunk.type) {
       case 'text-delta':
@@ -32,7 +25,6 @@ async function basicStream() {
     }
   }
 
-  // Access final results
   const text = await result.text;
   const usage = await result.usage;
   console.log('\n\nCompleted.');
@@ -43,7 +35,8 @@ async function basicStream() {
 async function multiStepStream() {
   const agent = createAgent({
     name: 'multi-step-example',
-    instructions: 'You are a thorough code reviewer. Read files carefully before providing feedback.',
+    instructions:
+      'You are a thorough code reviewer. Read files carefully before providing feedback.',
     workspaceRoot: process.cwd(),
     maxSteps: 30,
   });

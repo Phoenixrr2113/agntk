@@ -1,15 +1,18 @@
-/**
- * @fileoverview Tests for configuration loading.
- */
-
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadConfig, resetConfig, getConfig, configure, getModelForTier, defineConfig } from '../loader';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  loadConfig,
+  resetConfig,
+  getConfig,
+  configure,
+  getModelForTier,
+  defineConfig,
+} from '../loader';
 import { DEFAULT_PROVIDER, DEFAULT_MODELS } from '../defaults';
 
 describe('Config Loader', () => {
   beforeEach(() => {
     resetConfig();
-    // Clear env vars
+
     delete process.env['AGENT_SDK_MODEL_FAST'];
     delete process.env['AGENT_SDK_MODEL_POWERFUL'];
     delete process.env['AGENT_SDK_DEFAULT_PROVIDER'];

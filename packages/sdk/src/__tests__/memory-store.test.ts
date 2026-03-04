@@ -1,24 +1,9 @@
-/**
- * @fileoverview Tests for MarkdownMemoryStore.
- *
- * Validates:
- * - load/save for all file types
- * - Auto-directory creation
- * - CLAUDE.md / AGENTS.md fallback for loadProject()
- * - Missing files return null
- * - appendDecision separator logic
- */
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { MarkdownMemoryStore } from '../memory/store';
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 let projectDir: string;
 let globalDir: string;
@@ -36,10 +21,6 @@ function createStore(opts?: { projectDir?: string; globalDir?: string; workspace
   });
 }
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 describe('MarkdownMemoryStore', () => {
   beforeEach(async () => {
     await createTempDirs();
@@ -49,8 +30,6 @@ describe('MarkdownMemoryStore', () => {
     await rm(projectDir, { recursive: true, force: true });
     await rm(globalDir, { recursive: true, force: true });
   });
-
-  // ── Load methods return null for missing files ──────────────
 
   describe('load methods (missing files)', () => {
     it('loadIdentity returns null when file does not exist', async () => {
@@ -68,11 +47,6 @@ describe('MarkdownMemoryStore', () => {
       expect(await store.loadProject()).toBeNull();
     });
 
-    it('loadMemory returns null when file does not exist', async () => {
-      const store = createStore();
-      expect(await store.loadMemory()).toBeNull();
-    });
-
     it('loadContext returns null when file does not exist', async () => {
       const store = createStore();
       expect(await store.loadContext()).toBeNull();
@@ -84,21 +58,12 @@ describe('MarkdownMemoryStore', () => {
     });
   });
 
-  // ── Save and load round-trip ──────────────────────────────
-
   describe('save and load', () => {
     it('saveContext creates directory and writes file, loadContext reads it back', async () => {
       const store = createStore();
       await store.saveContext('# Current Context\nWorking on tests');
       const result = await store.loadContext();
       expect(result).toBe('# Current Context\nWorking on tests');
-    });
-
-    it('saveMemory creates directory and writes file', async () => {
-      const store = createStore();
-      await store.saveMemory('# Memory\n- TypeScript is typed');
-      const result = await store.loadMemory();
-      expect(result).toBe('# Memory\n- TypeScript is typed');
     });
 
     it('savePreferences writes to global directory', async () => {
@@ -112,27 +77,25 @@ describe('MarkdownMemoryStore', () => {
       const store = createStore();
       const agntDir = join(projectDir, '.agntk');
       await mkdir(agntDir, { recursive: true });
-      await writeFile(join(agntDir, 'memory.md'), '', 'utf-8');
-      expect(await store.loadMemory()).toBeNull();
+      await writeFile(join(agntDir, 'context.md'), '', 'utf-8');
+      expect(await store.loadContext()).toBeNull();
     });
 
     it('returns null for whitespace-only files', async () => {
       const store = createStore();
       const agntDir = join(projectDir, '.agntk');
       await mkdir(agntDir, { recursive: true });
-      await writeFile(join(agntDir, 'memory.md'), '   \n  \n', 'utf-8');
-      expect(await store.loadMemory()).toBeNull();
+      await writeFile(join(agntDir, 'context.md'), '   \n  \n', 'utf-8');
+      expect(await store.loadContext()).toBeNull();
     });
   });
-
-  // ── Directory auto-creation ───────────────────────────────
 
   describe('auto-directory creation', () => {
     it('creates .agntk/ directory on first save', async () => {
       const store = createStore();
       const agntDir = join(projectDir, '.agntk');
       expect(existsSync(agntDir)).toBe(false);
-      await store.saveMemory('test content');
+      await store.saveContext('test content');
       expect(existsSync(agntDir)).toBe(true);
     });
 
@@ -144,8 +107,6 @@ describe('MarkdownMemoryStore', () => {
       expect(existsSync(globalAgntDir)).toBe(true);
     });
   });
-
-  // ── loadProject fallback ──────────────────────────────────
 
   describe('loadProject fallback', () => {
     it('returns .agntk/project.md if it exists', async () => {
@@ -185,8 +146,6 @@ describe('MarkdownMemoryStore', () => {
     });
   });
 
-  // ── appendDecision ────────────────────────────────────────
-
   describe('appendDecision', () => {
     it('creates file with entry if file does not exist', async () => {
       const store = createStore();
@@ -204,9 +163,14 @@ describe('MarkdownMemoryStore', () => {
       expect(result).toContain('## Second decision');
       expect(result).toContain('\n\n');
     });
-  });
 
-  // ── Path getters ──────────────────────────────────────────
+    it('writes to memory/ subdirectory', async () => {
+      const store = createStore();
+      await store.appendDecision('## Decision');
+      const memoryDir = store.getMemoryPath();
+      expect(existsSync(join(memoryDir, 'decisions.md'))).toBe(true);
+    });
+  });
 
   describe('path getters', () => {
     it('getProjectPath returns resolved path', () => {
@@ -217,6 +181,151 @@ describe('MarkdownMemoryStore', () => {
     it('getGlobalPath returns resolved path', () => {
       const store = createStore();
       expect(store.getGlobalPath()).toContain('.agntk');
+    });
+
+    it('getMemoryPath returns memory/ subdirectory', () => {
+      const store = createStore();
+      expect(store.getMemoryPath()).toContain('memory');
+      expect(store.getMemoryPath()).toContain('.agntk');
+    });
+
+    it('getWorkspacePath returns workspace/ subdirectory', () => {
+      const store = createStore();
+      expect(store.getWorkspacePath()).toContain('workspace');
+    });
+
+    it('getArchivePath returns archive/ subdirectory', () => {
+      const store = createStore();
+      expect(store.getArchivePath()).toContain('archive');
+    });
+  });
+
+  describe('ensureDirectories', () => {
+    it('creates memory/, workspace/, archive/ directories', async () => {
+      const store = createStore();
+      await store.ensureDirectories();
+      expect(existsSync(store.getMemoryPath())).toBe(true);
+      expect(existsSync(store.getWorkspacePath())).toBe(true);
+      expect(existsSync(store.getArchivePath())).toBe(true);
+    });
+
+    it('is idempotent', async () => {
+      const store = createStore();
+      await store.ensureDirectories();
+      await store.ensureDirectories();
+      expect(existsSync(store.getMemoryPath())).toBe(true);
+    });
+  });
+
+  describe('listMemoryFiles', () => {
+    it('returns empty array when memory/ does not exist', async () => {
+      const store = createStore();
+      expect(await store.listMemoryFiles()).toEqual([]);
+    });
+
+    it('returns .md files from memory/ directory', async () => {
+      const store = createStore();
+      const memoryDir = store.getMemoryPath();
+      await mkdir(memoryDir, { recursive: true });
+      await writeFile(join(memoryDir, 'api-design.md'), 'api notes', 'utf-8');
+      await writeFile(join(memoryDir, 'decisions.md'), 'decisions log', 'utf-8');
+      await writeFile(join(memoryDir, 'project-setup.md'), 'setup notes', 'utf-8');
+
+      const files = await store.listMemoryFiles();
+      expect(files).toEqual(['api-design.md', 'decisions.md', 'project-setup.md']);
+    });
+
+    it('excludes non-.md files', async () => {
+      const store = createStore();
+      const memoryDir = store.getMemoryPath();
+      await mkdir(memoryDir, { recursive: true });
+      await writeFile(join(memoryDir, 'notes.md'), 'notes', 'utf-8');
+      await writeFile(join(memoryDir, 'data.json'), '{}', 'utf-8');
+      await writeFile(join(memoryDir, '.hidden'), 'secret', 'utf-8');
+
+      const files = await store.listMemoryFiles();
+      expect(files).toEqual(['notes.md']);
+    });
+
+    it('returns sorted filenames', async () => {
+      const store = createStore();
+      const memoryDir = store.getMemoryPath();
+      await mkdir(memoryDir, { recursive: true });
+      await writeFile(join(memoryDir, 'zebra.md'), 'z', 'utf-8');
+      await writeFile(join(memoryDir, 'alpha.md'), 'a', 'utf-8');
+      await writeFile(join(memoryDir, 'middle.md'), 'm', 'utf-8');
+
+      const files = await store.listMemoryFiles();
+      expect(files).toEqual(['alpha.md', 'middle.md', 'zebra.md']);
+    });
+  });
+
+  describe('createTaskFolder', () => {
+    it('creates a timestamped folder in workspace/', async () => {
+      const store = createStore();
+      const path = await store.createTaskFolder('research-db');
+
+      expect(existsSync(path)).toBe(true);
+      expect(path).toContain('workspace');
+      expect(path).toContain('research-db');
+    });
+
+    it('sanitizes label characters', async () => {
+      const store = createStore();
+      const path = await store.createTaskFolder('Research DB Analytics!');
+
+      expect(path).toContain('research-db-analytics-');
+      expect(existsSync(path)).toBe(true);
+    });
+
+    it('creates current symlink pointing to new folder', async () => {
+      const store = createStore();
+      const path = await store.createTaskFolder('my-task');
+
+      const currentPath = await store.getCurrentTaskPath();
+      expect(currentPath).toBe(path);
+    });
+
+    it('updates current symlink when creating a second task', async () => {
+      const store = createStore();
+      await store.createTaskFolder('first-task');
+      const secondPath = await store.createTaskFolder('second-task');
+
+      const currentPath = await store.getCurrentTaskPath();
+      expect(currentPath).toBe(secondPath);
+    });
+  });
+
+  describe('archiveTask', () => {
+    it('moves task folder from workspace/ to archive/', async () => {
+      const store = createStore();
+      const taskPath = await store.createTaskFolder('done-task');
+      const folderName = taskPath.split('/').pop()!;
+
+      await store.archiveTask(folderName);
+
+      expect(existsSync(taskPath)).toBe(false);
+      expect(existsSync(join(store.getArchivePath(), folderName))).toBe(true);
+    });
+
+    it('does not throw for non-existent folder', async () => {
+      const store = createStore();
+      await store.ensureDirectories();
+      await expect(store.archiveTask('nonexistent')).resolves.not.toThrow();
+    });
+  });
+
+  describe('getCurrentTaskPath', () => {
+    it('returns null when no current symlink exists', async () => {
+      const store = createStore();
+      await store.ensureDirectories();
+      expect(await store.getCurrentTaskPath()).toBeNull();
+    });
+
+    it('returns the target of the current symlink', async () => {
+      const store = createStore();
+      const path = await store.createTaskFolder('active-task');
+      expect(await store.getCurrentTaskPath()).toBe(path);
     });
   });
 });

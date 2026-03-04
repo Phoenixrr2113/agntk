@@ -1,9 +1,3 @@
-/**
- * @agntk/core - Eval Suite Runner
- *
- * Runs eval cases with concurrency control and reporting.
- */
-
 import { createLogger } from '@agntk/logger';
 import type {
   EvalSuiteConfig,
@@ -17,31 +11,6 @@ import type { Agent } from '../types/agent';
 
 const log = createLogger('@agntk/core:evals');
 
-// ============================================================================
-// Suite Factory
-// ============================================================================
-
-/**
- * Create an eval suite that can be run against an agent.
- *
- * @example
- * ```typescript
- * const suite = createEvalSuite({
- *   name: 'greeting-evals',
- *   agent: myAgent,
- *   cases: [
- *     {
- *       name: 'basic-greeting',
- *       prompt: 'Say hello',
- *       assertions: [outputContains('hello')],
- *     },
- *   ],
- * });
- *
- * const results = await suite.run();
- * console.log(`${results.passed}/${results.totalCases} passed`);
- * ```
- */
 export function createEvalSuite(config: EvalSuiteConfig) {
   const { name, agent, cases, maxConcurrency = 1, reporter: reporterConfig = 'console' } = config;
 
@@ -56,19 +25,16 @@ export function createEvalSuite(config: EvalSuiteConfig) {
     name,
     cases,
 
-    /** Run all eval cases and return results. */
     async run(): Promise<EvalSuiteResult> {
       const startTime = Date.now();
       log.info('Starting eval suite', { name, caseCount: cases.length, maxConcurrency });
 
       const caseResults: EvalCaseResult[] = [];
 
-      // Run with concurrency control
       const queue = [...cases];
       const active: Promise<void>[] = [];
 
       while (queue.length > 0 || active.length > 0) {
-        // Fill up to maxConcurrency
         while (active.length < maxConcurrency && queue.length > 0) {
           const evalCase = queue.shift()!;
           const promise = runCase(agent, evalCase, reporter).then((result) => {
@@ -79,7 +45,6 @@ export function createEvalSuite(config: EvalSuiteConfig) {
           active.push(promise);
         }
 
-        // Wait for one to complete
         if (active.length > 0) {
           await Promise.race(active);
         }
@@ -107,10 +72,6 @@ export function createEvalSuite(config: EvalSuiteConfig) {
   };
 }
 
-// ============================================================================
-// Case Runner
-// ============================================================================
-
 async function runCase(
   agent: Agent,
   evalCase: EvalCase,
@@ -120,7 +81,6 @@ async function runCase(
   reporter.onCaseStart?.(evalCase.name);
 
   try {
-    // Run the agent with a timeout
     const timeout = evalCase.timeout ?? 30_000;
     const streamResult = await Promise.race([
       agent.stream({ prompt: evalCase.prompt }),
@@ -129,13 +89,13 @@ async function runCase(
       ),
     ]);
 
-    // Consume the stream to get the final text
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const _chunk of streamResult.fullStream) { /* drain */ }
+    for await (const _chunk of streamResult.fullStream) {
+      void 0;
+    }
     const text = await streamResult.text;
     const usage = await streamResult.usage;
 
-    // Build eval result from agent result
     const evalResult: EvalAgentResult = {
       text: text ?? '',
       steps: [],
@@ -148,7 +108,6 @@ async function runCase(
         : { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     };
 
-    // Run all assertions
     const assertionResults = await Promise.all(
       evalCase.assertions.map((assertion) => assertion.check(evalResult)),
     );
@@ -176,10 +135,6 @@ async function runCase(
   }
 }
 
-// ============================================================================
-// Built-in Reporters
-// ============================================================================
-
 function createConsoleReporter(): EvalReporter {
   return {
     onCaseStart(caseName) {
@@ -200,7 +155,9 @@ function createConsoleReporter(): EvalReporter {
       }
     },
     onSuiteEnd(result) {
-      log.info(`\n  ${result.name}: ${result.passed}/${result.totalCases} passed (${result.duration}ms)\n`);
+      log.info(
+        `\n  ${result.name}: ${result.passed}/${result.totalCases} passed (${result.duration}ms)\n`,
+      );
     },
   };
 }
@@ -208,25 +165,28 @@ function createConsoleReporter(): EvalReporter {
 function createJsonReporter(): EvalReporter {
   return {
     onSuiteEnd(result) {
-      // Output CI-friendly JSON to stdout
-      const output = JSON.stringify({
-        suite: result.name,
-        total: result.totalCases,
-        passed: result.passed,
-        failed: result.failed,
-        duration: result.duration,
-        cases: result.cases.map((c) => ({
-          name: c.name,
-          passed: c.passed,
-          duration: c.duration,
-          assertions: c.assertions.map((a) => ({
-            name: a.name,
-            passed: a.passed,
-            message: a.message,
+      const output = JSON.stringify(
+        {
+          suite: result.name,
+          total: result.totalCases,
+          passed: result.passed,
+          failed: result.failed,
+          duration: result.duration,
+          cases: result.cases.map((c) => ({
+            name: c.name,
+            passed: c.passed,
+            duration: c.duration,
+            assertions: c.assertions.map((a) => ({
+              name: a.name,
+              passed: a.passed,
+              message: a.message,
+            })),
+            error: c.error,
           })),
-          error: c.error,
-        })),
-      }, null, 2);
+        },
+        null,
+        2,
+      );
       process.stdout.write(output + '\n');
     },
   };

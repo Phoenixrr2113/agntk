@@ -11,24 +11,30 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
   const { createAgent } = await import('@agntk/core');
   const colors = createColors(process.stderr.isTTY ?? false);
 
+  let testModel: import('ai').LanguageModel | undefined;
+  if (process.env.AGNTK_TEST_MODE === '1') {
+    const { createTestModel } = await import('./test-model.js');
+    testModel = createTestModel();
+  }
+
   const agent = createAgent({
     name: args.name!,
     instructions: args.instructions ?? undefined,
     workspaceRoot: args.workspace,
-    maxSteps: args.maxSteps,
+    ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
+    ...(testModel ? { model: testModel } : {}),
   });
 
   setupLockCleanup(args.name!);
 
   if (args.outputLevel !== 'quiet') {
     const toolCount = agent.getToolNames().length;
+    const modelLabel = agent.getModelId();
     process.stderr.write(
-      `${colors.bold('agntk')} ${colors.dim('|')} ${colors.cyan(args.name!)} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.dim(`workspace: ${args.workspace}`)}\n`,
+      `${colors.bold('agntk')} ${colors.dim('|')} ${colors.cyan(args.name!)} ${colors.dim('|')} ${colors.dim(modelLabel)} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.dim(`workspace: ${args.workspace}`)}\n`,
     );
   }
 
-  // Suppress AI SDK's verbose error dumps to stderr during streaming.
-  // We handle errors ourselves via the stream's error events.
   const origStderrWrite = process.stderr.write.bind(process.stderr);
   process.stderr.write = ((...writeArgs: Parameters<typeof process.stderr.write>) => {
     const text = typeof writeArgs[0] === 'string' ? writeArgs[0] : (writeArgs[0]?.toString() ?? '');
@@ -46,11 +52,10 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
       status: process.stderr,
       level: args.outputLevel,
       colors,
-      maxSteps: args.maxSteps,
+      ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
       isTTY: process.stderr.isTTY ?? false,
     });
 
-    // If the stream had an error, provide a helpful message and exit
     if (streamError) {
       const { getResolvedProviderState } = await import('@agntk/core');
       const providerName = getResolvedProviderState()?.provider ?? 'unknown';
@@ -81,13 +86,10 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
 
-    // "No output generated" is a secondary error after the real error
-    // was already displayed by consumeStream. Exit cleanly.
     if (msg.includes('No output generated')) {
       process.exit(1);
     }
 
-    // Detect connection errors
     if (msg.includes('ECONNREFUSED') || msg.includes('fetch failed')) {
       const { getResolvedProviderState } = await import('@agntk/core');
       const providerName = getResolvedProviderState()?.provider ?? 'unknown';
@@ -100,7 +102,6 @@ export async function runOneShot(prompt: string, args: CLIArgs): Promise<void> {
       process.exit(1);
     }
 
-    // Re-throw for generic handling
     throw err;
   } finally {
     process.stderr.write = origStderrWrite;

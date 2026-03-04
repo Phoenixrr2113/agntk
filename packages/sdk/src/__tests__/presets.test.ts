@@ -1,12 +1,5 @@
-/**
- * @fileoverview Tests for tool presets.
- */
-
 import { describe, it, expect } from 'vitest';
-import {
-  createToolPreset,
-  toolPresets,
-} from '../presets/tools';
+import { createToolPreset, toolPresets } from '../presets/tools';
 
 describe('Tool Presets', () => {
   describe('toolPresets constants', () => {
@@ -64,7 +57,6 @@ describe('Tool Presets', () => {
         workspaceRoot: '/tmp',
       });
 
-      // Full includes all standard tools plus ast-grep
       expect(tools.glob).toBeDefined();
       expect(tools.grep).toBeDefined();
       expect(tools.shell).toBeDefined();
@@ -73,7 +65,7 @@ describe('Tool Presets', () => {
 
     it('should include custom tools', () => {
       const customTool = { description: 'Custom', execute: () => 'ok' };
-      
+
       const tools = createToolPreset('none', {
         customTools: { myTool: customTool },
       });

@@ -1,7 +1,3 @@
-/**
- * Deep reasoning tool constants
- */
-
 export const DEEP_REASONING_DESCRIPTION = `Think through complex problems step-by-step with deep reasoning. 
 Use when you need to analyze, debug, or understand something before acting.
 
@@ -29,9 +25,6 @@ NOT for task tracking—use plan tool for that.`;
 export const DEFAULT_MAX_HISTORY = 1000;
 export const DEFAULT_MAX_BRANCH_SIZE = 100;
 
-/**
- * When enabled, the agent uses unlimited step reasoning by default
- */
 export const UNRESTRICTED_MODE_DESCRIPTION = `Deep reasoning mode is ENABLED. 
 You have unlimited thinking steps - use as many as needed to fully analyze the problem.
 There are no step restrictions. Think deeply and thoroughly.`;

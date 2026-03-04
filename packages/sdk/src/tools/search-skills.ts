@@ -1,10 +1,3 @@
-/**
- * @agntk/core - Search Skills Tool
- *
- * AI SDK tool that allows agents to dynamically search for skills by keyword.
- * Backed by cached frontmatter metadata with file-change invalidation.
- */
-
 import { tool } from 'ai';
 import { z } from 'zod';
 import * as fs from 'node:fs';
@@ -14,36 +7,25 @@ import type { SkillMeta } from '../skills/types';
 
 const log = createLogger('@agntk/core:search-skills');
 
-// ============================================================================
-// Cache
-// ============================================================================
-
 interface SkillCache {
   skills: SkillMeta[];
-  /** Map of skill path → mtime at load time */
+
   mtimes: Map<string, number>;
   loadedAt: number;
 }
 
 let cache: SkillCache | null = null;
 
-/** Maximum age before a full re-scan (5 minutes). */
 const MAX_CACHE_AGE_MS = 5 * 60 * 1000;
 
-/**
- * Check if cached skill files have changed on disk.
- */
 function isCacheStale(c: SkillCache): boolean {
-  // Time-based expiry
   if (Date.now() - c.loadedAt > MAX_CACHE_AGE_MS) return true;
 
-  // Check mtimes of known files
   for (const [filePath, cachedMtime] of c.mtimes) {
     try {
       const stat = fs.statSync(filePath);
       if (stat.mtimeMs !== cachedMtime) return true;
-    } catch (_e: unknown) {
-      // File deleted → stale
+    } catch {
       return true;
     }
   }
@@ -51,9 +33,6 @@ function isCacheStale(c: SkillCache): boolean {
   return false;
 }
 
-/**
- * Get skills from cache or re-scan from disk.
- */
 function getCachedSkills(directories?: string[], basePath?: string): SkillMeta[] {
   if (cache && !isCacheStale(cache)) {
     return cache.skills;
@@ -67,8 +46,8 @@ function getCachedSkills(directories?: string[], basePath?: string): SkillMeta[]
     try {
       const stat = fs.statSync(skill.path);
       mtimes.set(skill.path, stat.mtimeMs);
-    } catch (_e: unknown) {
-      // Skip if stat fails
+    } catch {
+      void 0;
     }
   }
 
@@ -76,40 +55,22 @@ function getCachedSkills(directories?: string[], basePath?: string): SkillMeta[]
   return skills;
 }
 
-/**
- * Clear the skills cache. Useful for testing.
- */
 export function clearSkillsCache(): void {
   cache = null;
 }
 
-/**
- * Get the current cache for testing inspection.
- */
 export function getSkillsCache(): SkillCache | null {
   return cache;
 }
 
-// ============================================================================
-// Tool
-// ============================================================================
-
 export interface SearchSkillsToolConfig {
-  /** Directories to scan for skills. */
   directories?: string[];
-  /** Base path for resolving relative directories. */
+
   basePath?: string;
-  /** Maximum results to return. Default: 5 */
+
   maxResults?: number;
 }
 
-/**
- * Create a search_skills tool for agent skill discovery.
- *
- * The tool searches cached skill metadata by keyword, returning
- * top matches ranked by relevance. Results include name, description,
- * tags, and when_to_use for the supervisor LLM to pick from.
- */
 export function createSearchSkillsTool(config: SearchSkillsToolConfig = {}) {
   const { directories, basePath, maxResults = 5 } = config;
 

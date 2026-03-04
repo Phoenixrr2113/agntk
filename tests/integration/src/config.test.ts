@@ -1,11 +1,5 @@
-/**
- * @fileoverview Integration tests for SDK configuration system.
- * Tests loadConfig, configure, getConfig, defineConfig, getModelForTier.
- */
-
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
-  loadConfig,
   getConfig,
   configure,
   defineConfig,
@@ -31,7 +25,9 @@ describe('Configuration', () => {
       const tiers = ['fast', 'standard', 'reasoning', 'powerful'];
       for (const provider of ['openrouter', 'ollama', 'openai'] as const) {
         for (const tier of tiers) {
-          expect(DEFAULT_MODELS[provider][tier as keyof typeof DEFAULT_MODELS.openrouter]).toBeDefined();
+          expect(
+            DEFAULT_MODELS[provider][tier as keyof typeof DEFAULT_MODELS.openrouter],
+          ).toBeDefined();
         }
       }
     });
@@ -97,7 +93,7 @@ describe('Configuration', () => {
     it('should return different models for different tiers', () => {
       const fast = getModelForTier('fast');
       const powerful = getModelForTier('powerful');
-      // Models may be different for different tiers (depending on provider defaults)
+
       expect(typeof fast).toBe('string');
       expect(typeof powerful).toBe('string');
     });

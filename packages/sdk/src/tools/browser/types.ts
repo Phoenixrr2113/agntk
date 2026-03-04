@@ -1,19 +1,6 @@
-/**
- * @fileoverview Types and Zod schemas for the browser tool.
- * Wraps the agent-browser CLI with typed action schemas.
- */
-
 import { z } from 'zod';
 
-// ============================================================================
-// Selector Description (shared across actions)
-// ============================================================================
-
 const selectorDesc = 'Element selector: ref (@e1), CSS (.class), or text ("Submit")';
-
-// ============================================================================
-// Action Schemas (discriminated union on `action`)
-// ============================================================================
 
 const openSchema = z.object({
   action: z.literal('open'),
@@ -94,7 +81,9 @@ const waitSchema = z.object({
   ms: z.number().optional().describe('Wait for milliseconds'),
   text: z.string().optional().describe('Wait for text to appear on page'),
   url: z.string().optional().describe('Wait for URL pattern'),
-  load: z.enum(['load', 'domcontentloaded', 'networkidle']).optional()
+  load: z
+    .enum(['load', 'domcontentloaded', 'networkidle'])
+    .optional()
     .describe('Wait for page load state'),
 });
 
@@ -116,10 +105,6 @@ const uncheckSchema = z.object({
 const closeSchema = z.object({
   action: z.literal('close'),
 });
-
-// ============================================================================
-// Combined Input Schema
-// ============================================================================
 
 export const browserInputSchema = z.discriminatedUnion('action', [
   openSchema,
@@ -147,10 +132,6 @@ export type BrowserInput = z.infer<typeof browserInputSchema>;
 
 export type BrowserAction = BrowserInput['action'];
 
-// ============================================================================
-// Result Types
-// ============================================================================
-
 export interface BrowserResult {
   output: string;
   exitCode: number;
@@ -158,25 +139,36 @@ export interface BrowserResult {
   durationMs: number;
 }
 
-// ============================================================================
-// Config
-// ============================================================================
-
 export interface BrowserConfig {
-  /** Timeout for browser commands in ms. Default: 30000 */
   timeout?: number;
-  /** Session name for persistent browser state */
+
   session?: string;
-  /** Connect to a remote browser via CDP URL */
+
   cdpUrl?: string;
-  /** Headless mode. Default: true */
+
   headless?: boolean;
 }
 
 export const BROWSER_ACTIONS = [
-  'open', 'snapshot', 'click', 'dblclick', 'fill', 'type', 'select',
-  'press', 'hover', 'scroll', 'screenshot', 'getText', 'getUrl',
-  'getTitle', 'wait', 'eval', 'check', 'uncheck', 'close',
+  'open',
+  'snapshot',
+  'click',
+  'dblclick',
+  'fill',
+  'type',
+  'select',
+  'press',
+  'hover',
+  'scroll',
+  'screenshot',
+  'getText',
+  'getUrl',
+  'getTitle',
+  'wait',
+  'eval',
+  'check',
+  'uncheck',
+  'close',
 ] as const;
 
 export const BROWSER_TOOL_DESCRIPTION = `Browse the web, interact with pages, and extract content using the agent-browser CLI.

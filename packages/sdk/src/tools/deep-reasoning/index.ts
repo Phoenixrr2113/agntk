@@ -1,7 +1,9 @@
-// Tool exports
+/**
+ * @fileoverview Entry point for the deep-reasoning tool.
+ * Exports types, constants, and the tool creation function for agentic reasoning.
+ */
 export { createDeepReasoningTool } from './tools';
 
-// Engine exports
 export {
   DeepReasoningEngine,
   configureDeepReasoning,
@@ -10,7 +12,6 @@ export {
   resetDeepReasoningEngine,
 } from './engine';
 
-// Type exports
 export type {
   ThoughtData,
   ReasoningResult,
@@ -18,7 +19,6 @@ export type {
   DeepReasoningInput,
 } from './types';
 
-// Constant exports
 export {
   DEEP_REASONING_DESCRIPTION,
   UNRESTRICTED_MODE_DESCRIPTION,

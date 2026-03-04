@@ -1,7 +1,3 @@
-/**
- * @fileoverview Skills module public API.
- */
-
 export type { SkillMeta, SkillContent, SkillsConfig, SkillRequirements } from './types';
 export {
   type ParsedSkillFrontmatter,

@@ -1,8 +1,4 @@
-/**
- * @fileoverview Tests for the evals framework.
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { StepResult, ToolSet } from 'ai';
 import type { EvalAgentResult, EvalReporter } from '../evals/types';
 import type { Agent } from '../types/agent';
@@ -37,10 +33,6 @@ import {
 } from '../evals/assertions';
 import { createEvalSuite } from '../evals/runner';
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function makeResult(overrides: Partial<EvalAgentResult> = {}): EvalAgentResult {
   return {
     text: overrides.text ?? 'Hello world',
@@ -73,19 +65,18 @@ function createMockAgent(text = 'mock output', _steps: StepResult<ToolSet>[] = [
     }),
     getSystemPrompt: () => 'test prompt',
     getToolNames: () => [],
+    getModelId: () => 'mock-model',
   } as unknown as Agent;
 }
-
-// ============================================================================
-// Assertion Tests
-// ============================================================================
 
 describe('toolCalled', () => {
   it('should pass when tool was called', () => {
     const assertion = toolCalled('shell');
-    const result = assertion.check(makeResult({
-      steps: [makeStep([{ toolName: 'shell' }])],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep([{ toolName: 'shell' }])],
+      }),
+    );
     expect(result).toMatchObject({ passed: true });
   });
 
@@ -106,9 +97,11 @@ describe('noToolCalled', () => {
 
   it('should fail when tool was called', () => {
     const assertion = noToolCalled('dangerous_tool');
-    const result = assertion.check(makeResult({
-      steps: [makeStep([{ toolName: 'dangerous_tool' }])],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep([{ toolName: 'dangerous_tool' }])],
+      }),
+    );
     expect(result).toMatchObject({ passed: false });
   });
 });
@@ -116,20 +109,24 @@ describe('noToolCalled', () => {
 describe('toolCalledTimes', () => {
   it('should pass when tool called the expected number of times', () => {
     const assertion = toolCalledTimes('shell', 2);
-    const result = assertion.check(makeResult({
-      steps: [
-        makeStep([{ toolName: 'shell' }]),
-        makeStep([{ toolName: 'shell' }, { toolName: 'read' }]),
-      ],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [
+          makeStep([{ toolName: 'shell' }]),
+          makeStep([{ toolName: 'shell' }, { toolName: 'read' }]),
+        ],
+      }),
+    );
     expect(result).toMatchObject({ passed: true });
   });
 
   it('should fail when count does not match', () => {
     const assertion = toolCalledTimes('shell', 3);
-    const result = assertion.check(makeResult({
-      steps: [makeStep([{ toolName: 'shell' }])],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep([{ toolName: 'shell' }])],
+      }),
+    );
     expect(result).toMatchObject({ passed: false });
     expect((result as { message?: string }).message).toContain('Expected 3');
   });
@@ -166,33 +163,41 @@ describe('outputContains', () => {
 describe('stepCount', () => {
   it('should pass when step count is within range', () => {
     const assertion = stepCount(1, 3);
-    const result = assertion.check(makeResult({
-      steps: [makeStep(), makeStep()],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep(), makeStep()],
+      }),
+    );
     expect(result).toMatchObject({ passed: true });
   });
 
   it('should fail when below min', () => {
     const assertion = stepCount(3, 5);
-    const result = assertion.check(makeResult({
-      steps: [makeStep()],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep()],
+      }),
+    );
     expect(result).toMatchObject({ passed: false });
   });
 
   it('should fail when above max', () => {
     const assertion = stepCount(1, 2);
-    const result = assertion.check(makeResult({
-      steps: [makeStep(), makeStep(), makeStep()],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep(), makeStep(), makeStep()],
+      }),
+    );
     expect(result).toMatchObject({ passed: false });
   });
 
   it('should work with min only (no max)', () => {
     const assertion = stepCount(1);
-    const result = assertion.check(makeResult({
-      steps: [makeStep(), makeStep(), makeStep(), makeStep()],
-    }));
+    const result = assertion.check(
+      makeResult({
+        steps: [makeStep(), makeStep(), makeStep(), makeStep()],
+      }),
+    );
     expect(result).toMatchObject({ passed: true });
   });
 });
@@ -200,17 +205,21 @@ describe('stepCount', () => {
 describe('tokenUsage', () => {
   it('should pass when under budget', () => {
     const assertion = tokenUsage(500);
-    const result = assertion.check(makeResult({
-      totalUsage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
-    }));
+    const result = assertion.check(
+      makeResult({
+        totalUsage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      }),
+    );
     expect(result).toMatchObject({ passed: true });
   });
 
   it('should fail when over budget', () => {
     const assertion = tokenUsage(100);
-    const result = assertion.check(makeResult({
-      totalUsage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
-    }));
+    const result = assertion.check(
+      makeResult({
+        totalUsage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      }),
+    );
     expect(result).toMatchObject({ passed: false });
     expect((result as { message?: string }).message).toContain('150');
   });
@@ -241,19 +250,13 @@ describe('custom', () => {
   });
 });
 
-// ============================================================================
-// createEvalSuite Tests
-// ============================================================================
-
 describe('createEvalSuite', () => {
   it('should create a suite with name and cases', () => {
     const agent = createMockAgent();
     const suite = createEvalSuite({
       name: 'test-suite',
       agent,
-      cases: [
-        { name: 'case-1', prompt: 'hello', assertions: [outputContains('mock')] },
-      ],
+      cases: [{ name: 'case-1', prompt: 'hello', assertions: [outputContains('mock')] }],
     });
 
     expect(suite.name).toBe('test-suite');
@@ -285,9 +288,7 @@ describe('createEvalSuite', () => {
     const suite = createEvalSuite({
       name: 'test-suite',
       agent,
-      cases: [
-        { name: 'case-1', prompt: 'greet', assertions: [outputContains('goodbye')] },
-      ],
+      cases: [{ name: 'case-1', prompt: 'greet', assertions: [outputContains('goodbye')] }],
     });
 
     const results = await suite.run();
@@ -305,9 +306,7 @@ describe('createEvalSuite', () => {
     const suite = createEvalSuite({
       name: 'error-suite',
       agent,
-      cases: [
-        { name: 'case-1', prompt: 'fail', assertions: [outputContains('anything')] },
-      ],
+      cases: [{ name: 'case-1', prompt: 'fail', assertions: [outputContains('anything')] }],
     });
 
     const results = await suite.run();
@@ -360,9 +359,7 @@ describe('createEvalSuite', () => {
     const suite = createEvalSuite({
       name: 'timeout-suite',
       agent,
-      cases: [
-        { name: 'slow', prompt: 'wait', assertions: [outputContains('x')], timeout: 50 },
-      ],
+      cases: [{ name: 'slow', prompt: 'wait', assertions: [outputContains('x')], timeout: 50 }],
     });
 
     const results = await suite.run();
@@ -383,9 +380,7 @@ describe('createEvalSuite', () => {
       name: 'reporter-suite',
       agent,
       reporter,
-      cases: [
-        { name: 'case-1', prompt: 'test', assertions: [outputContains('ok')] },
-      ],
+      cases: [{ name: 'case-1', prompt: 'test', assertions: [outputContains('ok')] }],
     });
 
     await suite.run();
@@ -408,9 +403,7 @@ describe('createEvalSuite', () => {
       name: 'json-suite',
       agent,
       reporter: 'json',
-      cases: [
-        { name: 'case-1', prompt: 'test', assertions: [outputContains('ok')] },
-      ],
+      cases: [{ name: 'case-1', prompt: 'test', assertions: [outputContains('ok')] }],
     });
 
     await suite.run();
@@ -434,11 +427,7 @@ describe('createEvalSuite', () => {
         {
           name: 'multiple',
           prompt: 'greet',
-          assertions: [
-            outputContains('Hello'),
-            outputContains('world'),
-            outputMatches(/^Hello/),
-          ],
+          assertions: [outputContains('Hello'), outputContains('world'), outputMatches(/^Hello/)],
         },
       ],
     });

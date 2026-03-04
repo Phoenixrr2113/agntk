@@ -1,8 +1,3 @@
-/**
- * @agntk/core - Streaming Types
- * Standalone streaming event types for agent communication
- */
-
 export type StreamEventType =
   | 'session:start'
   | 'step:start'
@@ -109,16 +104,9 @@ export interface StreamEvent<T extends StreamEventType = StreamEventType> {
   timestamp: number;
 }
 
-export type StreamEventCallback = (
-  event: StreamEvent
-) => void | Promise<void>;
+export type StreamEventCallback = (event: StreamEvent) => void | Promise<void>;
 
-export type MessagePartType =
-  | 'text'
-  | 'reasoning'
-  | 'tool-call'
-  | 'tool-result'
-  | 'source';
+export type MessagePartType = 'text' | 'reasoning' | 'tool-call' | 'tool-result' | 'source';
 
 export interface MessagePart {
   type: MessagePartType;

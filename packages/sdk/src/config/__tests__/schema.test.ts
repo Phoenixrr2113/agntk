@@ -1,9 +1,10 @@
-/**
- * @fileoverview Tests for configuration schema validation.
- */
-
 import { describe, it, expect } from 'vitest';
-import { AgentConfigSchema, PartialAgentConfigSchema, RoleConfigSchema, ModelTierSchema } from '../schema';
+import {
+  AgentConfigSchema,
+  PartialAgentConfigSchema,
+  RoleConfigSchema,
+  ModelTierSchema,
+} from '../schema';
 
 describe('Config Schema', () => {
   describe('ModelTierSchema', () => {
@@ -87,11 +88,13 @@ describe('Config Schema', () => {
     });
 
     it('should reject invalid provider', () => {
-      expect(() => AgentConfigSchema.parse({
-        models: {
-          defaultProvider: 'invalid-provider',
-        },
-      })).toThrow();
+      expect(() =>
+        AgentConfigSchema.parse({
+          models: {
+            defaultProvider: 'invalid-provider',
+          },
+        }),
+      ).toThrow();
     });
   });
 

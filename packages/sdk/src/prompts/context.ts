@@ -1,16 +1,9 @@
 /**
- * @agntk/core - System Context Builder
- * Builds dynamic context information for agent system prompts
+ * @fileoverview System context and prompt building utilities.
+ * Handles gathering of environment information, user preferences, and workspace
+ * structure to provide contextual information to the AI model.
  */
-
-import { createLogger } from '@agntk/logger';
 import { GEOLOCATION_API_URL, GEOLOCATION_ENABLED_DEFAULT } from '../constants';
-
-const log = createLogger('@agntk/core:context');
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface UserLocation {
   city?: string;
@@ -33,22 +26,18 @@ export interface UserPreferences {
 }
 
 export interface SystemContext {
-  // Time
   currentTime: string;
   currentDate: string;
   timezone: string;
-  
-  // Environment
+
   platform: string;
   hostname: string;
   username: string;
   locale: string;
-  
-  // Workspace
+
   workspaceRoot?: string;
   workspaceMap?: string;
-  
-  // User
+
   userLocation?: UserLocation;
   userPreferences?: UserPreferences;
   userProfileBlock?: string;
@@ -59,15 +48,8 @@ export interface ContextOptions {
   includeWorkspaceMap?: boolean;
   userLocation?: UserLocation;
   userPreferences?: UserPreferences;
-  fetchLocation?: boolean; // If true, attempt to get location from IP
-  // Memory-based preference loading was removed when the vectra memory system
-  // was replaced with the markdown-based memory system (Phase 2).
-  // Preferences are now loaded from ~/.agntk/preferences.md by the memory loader.
+  fetchLocation?: boolean;
 }
-
-// ============================================================================
-// Runtime Detection
-// ============================================================================
 
 const isNode = typeof process !== 'undefined' && process.versions?.node;
 
@@ -79,7 +61,7 @@ async function getNodeInfo(): Promise<{ platform: string; hostname: string; user
       username: 'user',
     };
   }
-  
+
   const os = await import('node:os');
   return {
     platform: os.platform(),
@@ -95,23 +77,19 @@ function getLocale(): string {
   return 'en-US';
 }
 
-// ============================================================================
-// Location (Optional)
-// ============================================================================
-
 async function fetchUserLocation(): Promise<UserLocation | undefined> {
   try {
     const response = await fetch(GEOLOCATION_API_URL);
     if (!response.ok) return undefined;
-    
-    const data = await response.json() as {
+
+    const data = (await response.json()) as {
       city?: string;
       regionName?: string;
       country?: string;
       countryCode?: string;
       timezone?: string;
     };
-    
+
     return {
       city: data.city,
       region: data.regionName,
@@ -124,28 +102,27 @@ async function fetchUserLocation(): Promise<UserLocation | undefined> {
   }
 }
 
-// ============================================================================
-// Workspace Map
-// ============================================================================
-
 async function generateWorkspaceMap(workspaceRoot: string): Promise<string> {
   if (!isNode) return '';
-  
+
   try {
     const fs = await import('node:fs');
     const path = await import('node:path');
-    
+
     if (!fs.existsSync(workspaceRoot)) return '';
-    
+
     const entries = fs.readdirSync(workspaceRoot);
     const topLevel = entries
-      .filter(e => !e.startsWith('.'))
+      .filter((e) => !e.startsWith('.'))
       .slice(0, 20)
-      .map(e => {
+      .map((e) => {
         const fullPath = path.join(workspaceRoot, e);
         const isDir = fs.statSync(fullPath).isDirectory();
         if (isDir) {
-          const children = fs.readdirSync(fullPath).filter(c => !c.startsWith('.')).slice(0, 5);
+          const children = fs
+            .readdirSync(fullPath)
+            .filter((c) => !c.startsWith('.'))
+            .slice(0, 5);
           return `${e}/: ${children.join(', ')}${children.length >= 5 ? '...' : ''}`;
         }
         return e;
@@ -155,10 +132,6 @@ async function generateWorkspaceMap(workspaceRoot: string): Promise<string> {
     return '';
   }
 }
-
-// ============================================================================
-// Context Builder
-// ============================================================================
 
 export async function buildSystemContext(options: ContextOptions = {}): Promise<SystemContext> {
   const {
@@ -172,7 +145,6 @@ export async function buildSystemContext(options: ContextOptions = {}): Promise<
   const now = new Date();
   const nodeInfo = await getNodeInfo();
 
-  // Optionally fetch location
   let location = userLocation;
   if (!location && fetchLocation) {
     location = await fetchUserLocation();
@@ -181,8 +153,17 @@ export async function buildSystemContext(options: ContextOptions = {}): Promise<
   const preferences = userPreferences;
 
   const context: SystemContext = {
-    currentTime: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-    currentDate: now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+    currentTime: now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }),
+    currentDate: now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
     timezone: location?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     platform: nodeInfo.platform,
     hostname: nodeInfo.hostname,
@@ -200,10 +181,6 @@ export async function buildSystemContext(options: ContextOptions = {}): Promise<
   return context;
 }
 
-// ============================================================================
-// Formatting
-// ============================================================================
-
 export function formatSystemContextBlock(context: SystemContext): string {
   const lines = [
     '# Current Environment',
@@ -215,7 +192,6 @@ export function formatSystemContextBlock(context: SystemContext): string {
     `- **User**: ${context.username}`,
   ];
 
-  // Location
   if (context.userLocation) {
     const loc = context.userLocation;
     const locationParts = [loc.city, loc.region, loc.country].filter(Boolean);
@@ -224,7 +200,6 @@ export function formatSystemContextBlock(context: SystemContext): string {
     }
   }
 
-  // Workspace
   if (context.workspaceRoot) {
     lines.push(`- **Workspace**: ${context.workspaceRoot}`);
   }
@@ -237,23 +212,24 @@ export function formatSystemContextBlock(context: SystemContext): string {
     lines.push('```');
   }
 
-  // User Preferences
   if (context.userPreferences) {
     const prefs = context.userPreferences;
     lines.push('');
     lines.push('## User Preferences');
-    
+
     if (prefs.name) lines.push(`- **Name**: ${prefs.name}`);
     if (prefs.language) lines.push(`- **Preferred Language**: ${prefs.language}`);
-    if (prefs.communicationStyle) lines.push(`- **Communication Style**: ${prefs.communicationStyle}`);
-    
+    if (prefs.communicationStyle)
+      lines.push(`- **Communication Style**: ${prefs.communicationStyle}`);
+
     if (prefs.codeStyle) {
       lines.push('- **Code Style**:');
-      if (prefs.codeStyle.indentation) lines.push(`  - Indentation: ${prefs.codeStyle.indentation}`);
+      if (prefs.codeStyle.indentation)
+        lines.push(`  - Indentation: ${prefs.codeStyle.indentation}`);
       if (prefs.codeStyle.indentSize) lines.push(`  - Indent Size: ${prefs.codeStyle.indentSize}`);
       if (prefs.codeStyle.quoteStyle) lines.push(`  - Quote Style: ${prefs.codeStyle.quoteStyle}`);
     }
-    
+
     if (prefs.customPreferences && Object.keys(prefs.customPreferences).length > 0) {
       for (const [key, value] of Object.entries(prefs.customPreferences)) {
         lines.push(`- **${key}**: ${String(value)}`);
@@ -261,7 +237,6 @@ export function formatSystemContextBlock(context: SystemContext): string {
     }
   }
 
-  // Appended profile block (from memory system)
   if (context.userProfileBlock) {
     lines.push('');
     lines.push(context.userProfileBlock);
@@ -270,17 +245,11 @@ export function formatSystemContextBlock(context: SystemContext): string {
   return lines.join('\n');
 }
 
-// ============================================================================
-// Convenience Function
-// ============================================================================
-
 export async function buildDynamicSystemPrompt(
   basePrompt: string,
-  options: ContextOptions = {}
+  options: ContextOptions = {},
 ): Promise<string> {
   const context = await buildSystemContext(options);
   const contextBlock = formatSystemContextBlock(context);
   return `${basePrompt}\n\n${contextBlock}`;
 }
-
-

@@ -1,17 +1,10 @@
-/**
- * @agntk/core - Prompts Tests
- */
-
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   buildSystemContext,
   formatSystemContextBlock,
   buildDynamicSystemPrompt,
-  type SystemContext
+  type SystemContext,
 } from '../prompts/context';
-
-// systemPrompt / rolePrompts tests removed — prompts/templates.ts was deleted in Phase 4b.
-// Role presets were removed in the unified API refactor.
 
 describe('buildSystemContext', () => {
   it('should return context with required fields', async () => {
@@ -32,13 +25,13 @@ describe('buildSystemContext', () => {
 
   it('should format current time correctly', async () => {
     const context = await buildSystemContext();
-    // Should be in format like "10:30 AM"
+
     expect(context.currentTime).toMatch(/\d{1,2}:\d{2}\s*(AM|PM)/i);
   });
 
   it('should format current date correctly', async () => {
     const context = await buildSystemContext();
-    // Should contain day of week and month
+
     expect(context.currentDate).toMatch(/\w+,\s+\w+\s+\d+,\s+\d{4}/);
   });
 });
@@ -110,7 +103,9 @@ describe('buildDynamicSystemPrompt', () => {
 
   it('should include workspace info when provided', async () => {
     const basePrompt = 'Base prompt.';
-    const dynamicPrompt = await buildDynamicSystemPrompt(basePrompt, { workspaceRoot: '/test/workspace' });
+    const dynamicPrompt = await buildDynamicSystemPrompt(basePrompt, {
+      workspaceRoot: '/test/workspace',
+    });
 
     expect(dynamicPrompt).toContain('/test/workspace');
   });

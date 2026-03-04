@@ -1,14 +1,5 @@
-/**
- * @agntk/logger - Namespace Matching Tests
- */
-
 import { describe, it, expect } from 'vitest';
-import {
-  parseDebugEnv,
-  matchesPattern,
-  isNamespaceEnabled,
-  childNamespace,
-} from '../namespace';
+import { parseDebugEnv, matchesPattern, isNamespaceEnabled, childNamespace } from '../namespace';
 
 describe('parseDebugEnv', () => {
   it('should return empty arrays for undefined', () => {

@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the Skills module.
- */
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -19,13 +15,13 @@ import {
 } from '../skills/loader';
 import type { SkillContent, SkillMeta } from '../skills/types';
 
-// ============================================================================
-// Test Fixtures
-// ============================================================================
-
 let tmpDir: string;
 
-function createSkillFile(dirName: string, frontmatter: Record<string, string>, body: string): string {
+function createSkillFile(
+  dirName: string,
+  frontmatter: Record<string, string>,
+  body: string,
+): string {
   const skillDir = path.join(tmpDir, dirName);
   fs.mkdirSync(skillDir, { recursive: true });
   const lines = [`---`];
@@ -45,10 +41,6 @@ beforeEach(() => {
 afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
-
-// ============================================================================
-// parseSkillFrontmatter
-// ============================================================================
 
 describe('parseSkillFrontmatter', () => {
   it('parses name and description from frontmatter', () => {
@@ -113,24 +105,19 @@ Line 3
   });
 });
 
-// ============================================================================
-// discoverSkills
-// ============================================================================
-
 describe('discoverSkills', () => {
   it('discovers skills in directories', () => {
     createSkillFile('skill-a', { name: 'alpha', description: 'First skill' }, 'Alpha instructions');
     createSkillFile('skill-b', { name: 'beta', description: 'Second skill' }, 'Beta instructions');
 
-    // Discover from tmpDir directly  
     const skills = discoverSkills([tmpDir]);
     expect(skills).toHaveLength(2);
-    expect(skills.map(s => s.name).sort()).toEqual(['alpha', 'beta']);
+    expect(skills.map((s) => s.name).sort()).toEqual(['alpha', 'beta']);
   });
 
   it('skips directories without SKILL.md', () => {
     createSkillFile('has-skill', { name: 'present', description: 'Here' }, 'Content');
-    // Create empty directory
+
     fs.mkdirSync(path.join(tmpDir, 'no-skill'), { recursive: true });
 
     const skills = discoverSkills([tmpDir]);
@@ -141,10 +128,7 @@ describe('discoverSkills', () => {
   it('uses directory name when no name in frontmatter', () => {
     const skillDir = path.join(tmpDir, 'my-tool');
     fs.mkdirSync(skillDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(skillDir, 'SKILL.md'),
-      'No frontmatter skill.',
-    );
+    fs.writeFileSync(path.join(skillDir, 'SKILL.md'), 'No frontmatter skill.');
 
     const skills = discoverSkills([tmpDir]);
     expect(skills).toHaveLength(1);
@@ -157,7 +141,6 @@ describe('discoverSkills', () => {
   });
 
   it('resolves relative paths against basePath', () => {
-    // Create .agents/skills/my-skill/SKILL.md relative to tmpDir
     const skillsBase = path.join(tmpDir, '.agents', 'skills');
     fs.mkdirSync(path.join(skillsBase, 'my-skill'), { recursive: true });
     fs.writeFileSync(
@@ -171,13 +154,13 @@ describe('discoverSkills', () => {
   });
 });
 
-// ============================================================================
-// loadSkillContent
-// ============================================================================
-
 describe('loadSkillContent', () => {
   it('loads full content for a discovered skill', () => {
-    createSkillFile('test-skill', { name: 'test', description: 'Test skill' }, 'Detailed instructions here.');
+    createSkillFile(
+      'test-skill',
+      { name: 'test', description: 'Test skill' },
+      'Detailed instructions here.',
+    );
 
     const discovered = discoverSkills([tmpDir]);
     expect(discovered).toHaveLength(1);
@@ -188,10 +171,6 @@ describe('loadSkillContent', () => {
   });
 });
 
-// ============================================================================
-// loadSkills
-// ============================================================================
-
 describe('loadSkills', () => {
   it('loads all skills with auto-discover', () => {
     createSkillFile('s1', { name: 'one', description: 'First' }, 'Body 1');
@@ -199,7 +178,7 @@ describe('loadSkills', () => {
 
     const skills = loadSkills({ directories: [tmpDir] });
     expect(skills).toHaveLength(2);
-    expect(skills.every(s => s.content.length > 0)).toBe(true);
+    expect(skills.every((s) => s.content.length > 0)).toBe(true);
   });
 
   it('filters by include list', () => {
@@ -219,13 +198,13 @@ describe('loadSkills', () => {
   });
 });
 
-// ============================================================================
-// loadSkillsFromPaths
-// ============================================================================
-
 describe('loadSkillsFromPaths', () => {
   it('loads skills from explicit paths', () => {
-    const dir = createSkillFile('explicit', { name: 'direct', description: 'Directly loaded' }, 'Direct content');
+    const dir = createSkillFile(
+      'explicit',
+      { name: 'direct', description: 'Directly loaded' },
+      'Direct content',
+    );
 
     const skills = loadSkillsFromPaths([dir]);
     expect(skills).toHaveLength(1);
@@ -241,10 +220,6 @@ describe('loadSkillsFromPaths', () => {
     expect(skills).toEqual([]);
   });
 });
-
-// ============================================================================
-// buildSkillsSystemPrompt
-// ============================================================================
 
 describe('buildSkillsSystemPrompt', () => {
   it('builds prompt with skill sections', () => {
@@ -283,10 +258,6 @@ describe('buildSkillsSystemPrompt', () => {
     expect(prompt).toContain('2 skill(s) available');
   });
 });
-
-// ============================================================================
-// Expanded Frontmatter Fields
-// ============================================================================
 
 describe('expanded frontmatter fields', () => {
   it('should parse tags', () => {
@@ -427,17 +398,44 @@ Full skill content.`;
   });
 });
 
-// ============================================================================
-// searchSkills
-// ============================================================================
-
 describe('searchSkills', () => {
   const skills: SkillMeta[] = [
-    { name: 'code-review', description: 'Reviews code for quality and bugs', path: '', directory: '', tags: ['review', 'quality'], whenToUse: 'When asked to review a pull request' },
-    { name: 'docker-deploy', description: 'Deploy with Docker containers', path: '', directory: '', tags: ['devops', 'docker', 'deploy'] },
-    { name: 'api-testing', description: 'Test REST APIs', path: '', directory: '', tags: ['testing', 'api'] },
-    { name: 'refactoring', description: 'Refactor code for readability', path: '', directory: '', tags: ['code', 'quality'] },
-    { name: 'git-workflow', description: 'Git branching and merging', path: '', directory: '', tags: ['git', 'devops'] },
+    {
+      name: 'code-review',
+      description: 'Reviews code for quality and bugs',
+      path: '',
+      directory: '',
+      tags: ['review', 'quality'],
+      whenToUse: 'When asked to review a pull request',
+    },
+    {
+      name: 'docker-deploy',
+      description: 'Deploy with Docker containers',
+      path: '',
+      directory: '',
+      tags: ['devops', 'docker', 'deploy'],
+    },
+    {
+      name: 'api-testing',
+      description: 'Test REST APIs',
+      path: '',
+      directory: '',
+      tags: ['testing', 'api'],
+    },
+    {
+      name: 'refactoring',
+      description: 'Refactor code for readability',
+      path: '',
+      directory: '',
+      tags: ['code', 'quality'],
+    },
+    {
+      name: 'git-workflow',
+      description: 'Git branching and merging',
+      path: '',
+      directory: '',
+      tags: ['git', 'devops'],
+    },
   ];
 
   it('should return empty for empty query', () => {
@@ -452,8 +450,8 @@ describe('searchSkills', () => {
 
   it('should match by tag', () => {
     const results = searchSkills(skills, 'devops');
-    expect(results.length).toBe(2); // docker-deploy and git-workflow
-    const names = results.map(r => r.skill.name);
+    expect(results.length).toBe(2);
+    const names = results.map((r) => r.skill.name);
     expect(names).toContain('docker-deploy');
     expect(names).toContain('git-workflow');
   });
@@ -471,11 +469,10 @@ describe('searchSkills', () => {
   });
 
   it('should rank results by relevance', () => {
-    // 'quality' appears in both code-review (tag) and refactoring (tag)
     const results = searchSkills(skills, 'quality');
     expect(results.length).toBe(2);
-    // Both have tag match, so both score equally
-    const names = results.map(r => r.skill.name);
+
+    const names = results.map((r) => r.skill.name);
     expect(names).toContain('code-review');
     expect(names).toContain('refactoring');
   });
@@ -491,10 +488,6 @@ describe('searchSkills', () => {
   });
 });
 
-// ============================================================================
-// filterEligibleSkills / isSkillEligible
-// ============================================================================
-
 describe('filterEligibleSkills', () => {
   it('should keep skills with no requirements', () => {
     const skills: SkillMeta[] = [
@@ -504,9 +497,14 @@ describe('filterEligibleSkills', () => {
   });
 
   it('should keep skills when binary exists on PATH', () => {
-    // 'node' should exist on PATH in test environment
     const skills: SkillMeta[] = [
-      { name: 'needs-node', description: 'Needs node', path: '', directory: '', requires: { binaries: ['node'] } },
+      {
+        name: 'needs-node',
+        description: 'Needs node',
+        path: '',
+        directory: '',
+        requires: { binaries: ['node'] },
+      },
     ];
     const eligible = filterEligibleSkills(skills);
     expect(eligible).toHaveLength(1);
@@ -514,18 +512,29 @@ describe('filterEligibleSkills', () => {
 
   it('should filter out skills with missing binary', () => {
     const skills: SkillMeta[] = [
-      { name: 'needs-imaginary', description: 'Missing', path: '', directory: '', requires: { binaries: ['__nonexistent_binary_12345__'] } },
+      {
+        name: 'needs-imaginary',
+        description: 'Missing',
+        path: '',
+        directory: '',
+        requires: { binaries: ['__nonexistent_binary_12345__'] },
+      },
     ];
     const eligible = filterEligibleSkills(skills);
     expect(eligible).toHaveLength(0);
   });
 
   it('should keep skills when env var exists', () => {
-    // Set a test env var
     process.env.__SKILL_TEST_VAR__ = 'true';
     try {
       const skills: SkillMeta[] = [
-        { name: 'needs-env', description: 'Needs env', path: '', directory: '', requires: { env: ['__SKILL_TEST_VAR__'] } },
+        {
+          name: 'needs-env',
+          description: 'Needs env',
+          path: '',
+          directory: '',
+          requires: { env: ['__SKILL_TEST_VAR__'] },
+        },
       ];
       expect(filterEligibleSkills(skills)).toHaveLength(1);
     } finally {
@@ -535,7 +544,13 @@ describe('filterEligibleSkills', () => {
 
   it('should filter out skills with missing env var', () => {
     const skills: SkillMeta[] = [
-      { name: 'needs-env', description: 'Missing', path: '', directory: '', requires: { env: ['__NONEXISTENT_ENV_VAR_12345__'] } },
+      {
+        name: 'needs-env',
+        description: 'Missing',
+        path: '',
+        directory: '',
+        requires: { env: ['__NONEXISTENT_ENV_VAR_12345__'] },
+      },
     ];
     expect(filterEligibleSkills(skills)).toHaveLength(0);
   });
@@ -544,13 +559,25 @@ describe('filterEligibleSkills', () => {
     process.env.__SKILL_TEST_VAR2__ = 'yes';
     try {
       const skills: SkillMeta[] = [
-        { name: 'all-good', description: 'Has everything', path: '', directory: '', requires: { binaries: ['node'], env: ['__SKILL_TEST_VAR2__'] } },
-        { name: 'missing-binary', description: 'Missing binary', path: '', directory: '', requires: { binaries: ['__fake__'] } },
+        {
+          name: 'all-good',
+          description: 'Has everything',
+          path: '',
+          directory: '',
+          requires: { binaries: ['node'], env: ['__SKILL_TEST_VAR2__'] },
+        },
+        {
+          name: 'missing-binary',
+          description: 'Missing binary',
+          path: '',
+          directory: '',
+          requires: { binaries: ['__fake__'] },
+        },
         { name: 'no-reqs', description: 'No requirements', path: '', directory: '' },
       ];
       const eligible = filterEligibleSkills(skills);
       expect(eligible).toHaveLength(2);
-      expect(eligible.map(s => s.name).sort()).toEqual(['all-good', 'no-reqs']);
+      expect(eligible.map((s) => s.name).sort()).toEqual(['all-good', 'no-reqs']);
     } finally {
       delete process.env.__SKILL_TEST_VAR2__;
     }
@@ -563,16 +590,26 @@ describe('isSkillEligible', () => {
   });
 
   it('should return false for missing binary', () => {
-    expect(isSkillEligible({
-      name: 'test', description: '', path: '', directory: '',
-      requires: { binaries: ['__definitely_not_installed__'] },
-    })).toBe(false);
+    expect(
+      isSkillEligible({
+        name: 'test',
+        description: '',
+        path: '',
+        directory: '',
+        requires: { binaries: ['__definitely_not_installed__'] },
+      }),
+    ).toBe(false);
   });
 
   it('should return false for missing env var', () => {
-    expect(isSkillEligible({
-      name: 'test', description: '', path: '', directory: '',
-      requires: { env: ['__NOT_SET_12345__'] },
-    })).toBe(false);
+    expect(
+      isSkillEligible({
+        name: 'test',
+        description: '',
+        path: '',
+        directory: '',
+        requires: { env: ['__NOT_SET_12345__'] },
+      }),
+    ).toBe(false);
   });
 });

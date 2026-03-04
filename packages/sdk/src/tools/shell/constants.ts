@@ -1,7 +1,3 @@
-/**
- * Shell tool constants
- */
-
 export const SHELL_DESCRIPTION = `Execute shell commands for tasks that specialized tools cannot accomplish.
 This tool runs bash commands with safety checks and optional allowlisting.
 
@@ -51,7 +47,20 @@ export const MAX_COMMAND_LENGTH = 10000;
 export const MAX_CWD_LENGTH = 1000;
 
 export const INTERACTIVE_COMMANDS = [
-  'vi', 'vim', 'nvim', 'nano', 'emacs', 'pico',
-  'htop', 'top', 'less', 'more', 'man',
-  'screen', 'tmux', 'ssh', 'telnet', 'ftp',
+  'vi',
+  'vim',
+  'nvim',
+  'nano',
+  'emacs',
+  'pico',
+  'htop',
+  'top',
+  'less',
+  'more',
+  'man',
+  'screen',
+  'tmux',
+  'ssh',
+  'telnet',
+  'ftp',
 ] as const;

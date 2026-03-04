@@ -22,7 +22,7 @@ export function formatSearchResult(result: SgResult): string {
   }
 
   lines.push(
-    `Found ${result.matches.length} match(es)${result.truncated ? ` (truncated from ${result.totalMatches})` : ''}:\n`
+    `Found ${result.matches.length} match(es)${result.truncated ? ` (truncated from ${result.totalMatches})` : ''}:\n`,
   );
 
   for (const match of result.matches) {

@@ -1,19 +1,8 @@
-/**
- * @agntk/core - Background Process Management Tool
- *
- * Manages long-running background processes with session tracking.
- * Ported from @agntk/brain shell to consolidate shell tools.
- */
-
 import { tool } from 'ai';
 import { z } from 'zod';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { isDangerousCommand, buildSanitizedEnv } from '../utils/shell';
 import { MAX_COMMAND_LENGTH, MAX_CWD_LENGTH } from './constants';
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface BackgroundSession {
   id: string;
@@ -27,14 +16,10 @@ export interface BackgroundSession {
   cwd?: string;
 }
 
-// ============================================================================
-// Session Store
-// ============================================================================
-
-const MAX_BUFFER = 1024 * 1024; // 1MB
-const ROLLING_BUFFER = 512 * 1024; // 512KB
+const MAX_BUFFER = 1024 * 1024;
+const ROLLING_BUFFER = 512 * 1024;
 const MAX_SESSIONS = 20;
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 
 const backgroundSessions = new Map<string, BackgroundSession>();
 
@@ -42,24 +27,22 @@ function generateSessionId(): string {
   return `bg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/**
- * Evict completed/stopped sessions when at capacity, or the oldest expired session.
- * M-1: prevents the Map from growing indefinitely.
- */
 function evictSessions(): void {
   const now = Date.now();
 
-  // First, remove TTL-expired entries regardless of capacity
   for (const [id, session] of backgroundSessions.entries()) {
     if (now - session.startedAt > SESSION_TTL_MS) {
       if (session.status === 'running') {
-        try { session.process.kill('SIGTERM'); } catch { /* ignore */ }
+        try {
+          session.process.kill('SIGTERM');
+        } catch {
+          void 0;
+        }
       }
       backgroundSessions.delete(id);
     }
   }
 
-  // Then, if still over cap, evict oldest completed/stopped session
   if (backgroundSessions.size >= MAX_SESSIONS) {
     for (const [id, session] of backgroundSessions.entries()) {
       if (session.status !== 'running') {
@@ -70,40 +53,36 @@ function evictSessions(): void {
   }
 }
 
-/** Get all sessions (for testing). */
 export function getBackgroundSessions(): Map<string, BackgroundSession> {
   return backgroundSessions;
 }
 
-/** Clear all sessions (for testing). */
 export function clearBackgroundSessions(): void {
   for (const session of backgroundSessions.values()) {
     if (session.status === 'running') {
-      try { session.process.kill('SIGTERM'); } catch (_e: unknown) { /* ignore */ }
+      try {
+        session.process.kill('SIGTERM');
+      } catch {
+        void 0;
+      }
     }
   }
   backgroundSessions.clear();
 }
 
-// ============================================================================
-// Background Process Lifecycle
-// ============================================================================
-
 function startBackgroundProcess(
   command: string,
   options: { cwd?: string; env?: Record<string, string> } = {},
 ): BackgroundSession {
-  // Evict old sessions before adding a new one (M-1)
   evictSessions();
 
   const sessionId = generateSessionId();
   const { cwd = process.cwd() } = options;
 
-  // S-12: filter user-supplied env — strip secrets and disallow PATH/LD_PRELOAD overrides
   const filteredExtra: Record<string, string> = {};
   if (options.env) {
     for (const [k, v] of Object.entries(options.env)) {
-      if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH') continue; // block dangerous overrides
+      if (k === 'LD_PRELOAD' || k === 'LD_LIBRARY_PATH') continue;
       filteredExtra[k] = v;
     }
   }
@@ -154,26 +133,18 @@ function startBackgroundProcess(
   return session;
 }
 
-// ============================================================================
-// Tool Factory
-// ============================================================================
-
 const backgroundInputSchema = z.object({
   operation: z.enum(['start', 'status', 'output', 'stop', 'list']).describe('Operation to perform'),
-  command: z.string().max(MAX_COMMAND_LENGTH).optional().describe('Command to run (required for start)'),
+  command: z
+    .string()
+    .max(MAX_COMMAND_LENGTH)
+    .optional()
+    .describe('Command to run (required for start)'),
   sessionId: z.string().optional().describe('Session ID (required for status/output/stop)'),
   cwd: z.string().max(MAX_CWD_LENGTH).optional().describe('Working directory (for start)'),
-  env: z.record(z.string()).optional().describe('Environment variables (for start)'),
+  env: z.record(z.string(), z.string()).optional().describe('Environment variables (for start)'),
 });
 
-/**
- * Create a background process management tool.
- *
- * @example
- * ```typescript
- * const tools = { shell: createShellTool('/my/project'), background: createBackgroundTool() };
- * ```
- */
 export function createBackgroundTool() {
   return tool({
     description: `Run long-running processes in the background without blocking.
@@ -202,10 +173,17 @@ Examples:
       switch (operation) {
         case 'start': {
           if (!command) {
-            return JSON.stringify({ success: false, error: 'Command is required for start operation' });
+            return JSON.stringify({
+              success: false,
+              error: 'Command is required for start operation',
+            });
           }
           if (isDangerousCommand(command)) {
-            return JSON.stringify({ success: false, error: 'Command blocked for safety', blocked: true });
+            return JSON.stringify({
+              success: false,
+              error: 'Command blocked for safety',
+              blocked: true,
+            });
           }
 
           const session = startBackgroundProcess(command, { cwd, env });
@@ -220,7 +198,10 @@ Examples:
 
         case 'status': {
           if (!sessionId) {
-            return JSON.stringify({ success: false, error: 'Session ID is required for status operation' });
+            return JSON.stringify({
+              success: false,
+              error: 'Session ID is required for status operation',
+            });
           }
           const session = backgroundSessions.get(sessionId);
           if (!session) {
@@ -231,16 +212,20 @@ Examples:
             sessionId: session.id,
             status: session.status,
             exitCode: session.exitCode,
-            runningFor: session.status === 'running'
-              ? Math.round((Date.now() - session.startedAt) / 1000) + 's'
-              : undefined,
+            runningFor:
+              session.status === 'running'
+                ? Math.round((Date.now() - session.startedAt) / 1000) + 's'
+                : undefined,
             command: session.command.slice(0, 100),
           });
         }
 
         case 'output': {
           if (!sessionId) {
-            return JSON.stringify({ success: false, error: 'Session ID is required for output operation' });
+            return JSON.stringify({
+              success: false,
+              error: 'Session ID is required for output operation',
+            });
           }
           const session = backgroundSessions.get(sessionId);
           if (!session) {
@@ -258,7 +243,10 @@ Examples:
 
         case 'stop': {
           if (!sessionId) {
-            return JSON.stringify({ success: false, error: 'Session ID is required for stop operation' });
+            return JSON.stringify({
+              success: false,
+              error: 'Session ID is required for stop operation',
+            });
           }
           const session = backgroundSessions.get(sessionId);
           if (!session) {
@@ -279,9 +267,15 @@ Examples:
                 if (session.status === 'running') {
                   session.process.kill('SIGKILL');
                 }
-              } catch (_e: unknown) { /* ignore */ }
+              } catch {
+                void 0;
+              }
             }, 5000);
-            return JSON.stringify({ success: true, message: 'Process terminated', sessionId: session.id });
+            return JSON.stringify({
+              success: true,
+              message: 'Process terminated',
+              sessionId: session.id,
+            });
           } catch (error) {
             return JSON.stringify({
               success: false,

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for the evaluation framework.
- * Tests createEvalSuite, assertions, and running eval cases with mock models.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect } from 'vitest';
 import { createAgent } from '@agntk/core';
 import {
@@ -135,11 +129,7 @@ describe('Evaluation Framework', () => {
     it('should track pass/fail counts', async () => {
       const agent = createAgent({
         name: 'eval-metrics-test',
-        model: createMockMultiModel([
-          'Hello world',
-          'The answer is 42',
-          'Goodbye universe',
-        ]),
+        model: createMockMultiModel(['Hello world', 'The answer is 42', 'Goodbye universe']),
         maxSteps: 1,
       });
 

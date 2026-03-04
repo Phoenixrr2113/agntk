@@ -1,14 +1,8 @@
-/**
- * @fileoverview Tests for createAgent — the unified, zero-config agent factory.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MockLanguageModelV3 } from 'ai/test';
 import { simulateReadableStream } from 'ai';
 import type { LanguageModel } from 'ai';
 
-// Mock internal dependencies (NOT 'ai' itself)
 vi.mock('@agntk/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -29,8 +23,9 @@ vi.mock('@agntk/logger', () => ({
 }));
 
 vi.mock('../models', () => ({
-  resolveModel: () => {
-    return new MockLanguageModelV3({
+  resolveModel: () => ({
+    modelId: 'mock-model',
+    model: new MockLanguageModelV3({
       doGenerate: async () => ({
         content: [{ type: 'text' as const, text: 'mock response' }],
         finishReason: { unified: 'stop' as const, raw: 'stop' },
@@ -58,20 +53,45 @@ vi.mock('../models', () => ({
           ],
         }),
       }),
-    }) as unknown as LanguageModel;
-  },
+    }) as unknown as LanguageModel,
+  }),
 }));
 
 vi.mock('../presets/tools', () => ({
   createToolPreset: (preset: string, _options?: Record<string, unknown>) => {
     if (preset === 'none') return {};
-    if (preset === 'full') return { glob: { description: 'glob' }, grep: { description: 'grep' }, shell: { description: 'shell' }, ast_grep_search: { description: 'ast' } };
+    if (preset === 'full')
+      return {
+        glob: { description: 'glob' },
+        grep: { description: 'grep' },
+        shell: { description: 'shell' },
+        ast_grep_search: { description: 'ast' },
+      };
     throw new Error(`Unknown tool preset: ${preset}`);
   },
 }));
 
 vi.mock('../tools/spawn-agent', () => ({
   createSpawnAgentTool: () => ({ description: 'spawn_agent mock' }),
+}));
+
+vi.mock('../tools/spawn-agent/check-agent', () => ({
+  createCheckAgentTool: () => ({ description: 'check_agent mock' }),
+}));
+
+vi.mock('../tools/spawn-agent/registry', () => ({
+  AgentRegistry: vi.fn().mockImplementation(function () {
+    return {
+      register: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn(),
+      getAll: vi.fn().mockReturnValue([]),
+      hasRunning: vi.fn().mockReturnValue(false),
+      getCounts: vi.fn().mockReturnValue({ running: 0, completed: 0, failed: 0 }),
+      setPersistPath: vi.fn(),
+      loadFromDisk: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
 }));
 
 vi.mock('../tools/model-retry', () => ({
@@ -107,7 +127,10 @@ vi.mock('../reflection', () => ({
 }));
 
 vi.mock('../guardrails/built-ins', () => ({
-  contentFilter: () => ({ name: 'content-filter', check: async () => ({ passed: true, name: 'content-filter' }) }),
+  contentFilter: () => ({
+    name: 'content-filter',
+    check: async () => ({ passed: true, name: 'content-filter' }),
+  }),
 }));
 
 vi.mock('../guardrails/runner', () => ({
@@ -116,30 +139,33 @@ vi.mock('../guardrails/runner', () => ({
 }));
 
 vi.mock('../memory/store', () => ({
-  MarkdownMemoryStore: vi.fn().mockImplementation(() => ({
-    getProjectPath: () => '/tmp/test',
-    getGlobalPath: () => '/tmp/test-global',
-  })),
+  MarkdownMemoryStore: vi.fn().mockImplementation(function () {
+    return {
+      getProjectPath: () => '/tmp/test',
+      getGlobalPath: () => '/tmp/test-global',
+      getMemoryPath: () => '/tmp/test/memory',
+      getWorkspacePath: () => '/tmp/test/workspace',
+      getArchivePath: () => '/tmp/test/archive',
+      ensureDirectories: vi.fn().mockResolvedValue(undefined),
+      getCurrentTaskPath: vi.fn().mockResolvedValue(null),
+    };
+  }),
 }));
 
 vi.mock('../memory/loader', () => ({
   loadMemoryContext: async () => null,
 }));
 
-vi.mock('../memory/tools', () => ({
-  createMemoryTools: () => ({}),
+vi.mock('../tools/workspace-middleware', () => ({
+  wrapAllToolsWithWorkspace: (tools: Record<string, unknown>) => tools,
 }));
 
 vi.mock('../prompts/context', () => ({
   buildDynamicSystemPrompt: async (prompt: string) => prompt,
 }));
 
-// --- Import after mocks ---
 import { createAgent } from '../agent';
 
-/**
- * Helper: create a MockLanguageModelV3 for passing directly as `model` option.
- */
 function createTestModel(text = 'test response'): LanguageModel {
   return new MockLanguageModelV3({
     doGenerate: async () => ({
@@ -216,7 +242,7 @@ describe('createAgent', () => {
       const agent = createAgent({ name: 'test-agent' });
       const toolNames = agent.getToolNames();
       expect(Array.isArray(toolNames)).toBe(true);
-      // Should have at least spawn_agent from the mock
+
       expect(toolNames).toContain('spawn_agent');
     });
   });
@@ -226,7 +252,10 @@ describe('createAgent', () => {
       const customTool = { description: 'my custom tool' };
       const agent = createAgent({
         name: 'test-agent',
-        tools: { myTool: customTool } as Record<string, unknown> as Record<string, import('ai').Tool>,
+        tools: { myTool: customTool } as Record<string, unknown> as Record<
+          string,
+          import('ai').Tool
+        >,
       });
       expect(agent.getToolNames()).toContain('myTool');
     });

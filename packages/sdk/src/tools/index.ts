@@ -134,6 +134,15 @@ export { ModelRetry, wrapToolWithRetry, wrapAllToolsWithRetry } from './model-re
 export { wrapAllToolsWithWorkspace, type WorkspaceMiddlewareOptions } from './workspace-middleware';
 
 export {
+  createProgressTools,
+  type FeatureStatus,
+  type ProgressFeature,
+  type SessionLogEntry,
+  type ProgressData,
+  type ProgressFileData,
+} from './progress';
+
+export {
   createSearchSkillsTool,
   clearSkillsCache,
   type SearchSkillsToolConfig,

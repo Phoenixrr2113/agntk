@@ -1,19 +1,6 @@
-/**
- * @fileoverview Tests for usage limits — UsageLimitExceeded, usageLimitStop, agent integration.
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  UsageLimitExceeded,
-  usageLimitStop,
-  type UsageLimits,
-  type UsageSnapshot,
-} from '../usage-limits';
+import { describe, it, expect } from 'vitest';
+import { UsageLimitExceeded, usageLimitStop, type UsageSnapshot } from '../usage-limits';
 import type { StepResult, ToolSet } from 'ai';
-
-// ============================================================================
-// Mock Step Builder
-// ============================================================================
 
 function createMockStep(usage: {
   inputTokens?: number;
@@ -25,15 +12,15 @@ function createMockStep(usage: {
       inputTokens: usage.inputTokens ?? 0,
       outputTokens: usage.outputTokens ?? 0,
       totalTokens: usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0),
-      inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
+      inputTokenDetails: {
+        noCacheTokens: undefined,
+        cacheReadTokens: undefined,
+        cacheWriteTokens: undefined,
+      },
       outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
     },
   } as unknown as StepResult<ToolSet>;
 }
-
-// ============================================================================
-// UsageLimitExceeded
-// ============================================================================
 
 describe('UsageLimitExceeded', () => {
   it('should contain limit type, value, current value, and usage', () => {
@@ -58,10 +45,6 @@ describe('UsageLimitExceeded', () => {
     expect(error.message).toContain('3');
   });
 });
-
-// ============================================================================
-// usageLimitStop
-// ============================================================================
 
 describe('usageLimitStop', () => {
   describe('maxRequests', () => {
@@ -89,31 +72,29 @@ describe('usageLimitStop', () => {
 
     it('should throw at exactly maxRequests + 1', () => {
       const stop = usageLimitStop({ maxRequests: 3 });
-      // Exactly 3 — still exceeds (3 > 3 is false, so no throw at exact count)
-      expect(stop({ steps: [createMockStep({}), createMockStep({}), createMockStep({})] })).toBe(false);
-      // 4 steps — exceeds
-      expect(() => stop({
-        steps: [createMockStep({}), createMockStep({}), createMockStep({}), createMockStep({})],
-      })).toThrow(UsageLimitExceeded);
+
+      expect(stop({ steps: [createMockStep({}), createMockStep({}), createMockStep({})] })).toBe(
+        false,
+      );
+
+      expect(() =>
+        stop({
+          steps: [createMockStep({}), createMockStep({}), createMockStep({}), createMockStep({})],
+        }),
+      ).toThrow(UsageLimitExceeded);
     });
   });
 
   describe('maxInputTokens', () => {
     it('should not stop when under limit', () => {
       const stop = usageLimitStop({ maxInputTokens: 1000 });
-      const steps = [
-        createMockStep({ inputTokens: 300 }),
-        createMockStep({ inputTokens: 400 }),
-      ];
+      const steps = [createMockStep({ inputTokens: 300 }), createMockStep({ inputTokens: 400 })];
       expect(stop({ steps })).toBe(false);
     });
 
     it('should throw when exceeding maxInputTokens', () => {
       const stop = usageLimitStop({ maxInputTokens: 500 });
-      const steps = [
-        createMockStep({ inputTokens: 300 }),
-        createMockStep({ inputTokens: 300 }),
-      ];
+      const steps = [createMockStep({ inputTokens: 300 }), createMockStep({ inputTokens: 300 })];
 
       try {
         stop({ steps });
@@ -130,10 +111,7 @@ describe('usageLimitStop', () => {
   describe('maxOutputTokens', () => {
     it('should throw when exceeding maxOutputTokens', () => {
       const stop = usageLimitStop({ maxOutputTokens: 200 });
-      const steps = [
-        createMockStep({ outputTokens: 100 }),
-        createMockStep({ outputTokens: 150 }),
-      ];
+      const steps = [createMockStep({ outputTokens: 100 }), createMockStep({ outputTokens: 150 })];
 
       try {
         stop({ steps });
@@ -184,10 +162,7 @@ describe('usageLimitStop', () => {
         maxTotalTokens: 5000,
       });
 
-      // Under all limits
-      const steps = [
-        createMockStep({ inputTokens: 200, outputTokens: 100, totalTokens: 300 }),
-      ];
+      const steps = [createMockStep({ inputTokens: 200, outputTokens: 100, totalTokens: 300 })];
       expect(stop({ steps })).toBe(false);
     });
 
@@ -226,7 +201,11 @@ describe('usageLimitStop', () => {
           inputTokens: undefined,
           outputTokens: undefined,
           totalTokens: undefined,
-          inputTokenDetails: { noCacheTokens: undefined, cacheReadTokens: undefined, cacheWriteTokens: undefined },
+          inputTokenDetails: {
+            noCacheTokens: undefined,
+            cacheReadTokens: undefined,
+            cacheWriteTokens: undefined,
+          },
           outputTokenDetails: { textTokens: undefined, reasoningTokens: undefined },
         },
       } as unknown as StepResult<ToolSet>;
@@ -239,11 +218,3 @@ describe('usageLimitStop', () => {
     });
   });
 });
-
-// ============================================================================
-// Agent Integration (separate test file due to vi.mock hoisting)
-// ============================================================================
-// Note: Full agent integration with usageLimits is tested in agent.test.ts.
-// These unit tests cover the usageLimitStop logic thoroughly, which is the
-// core enforcement mechanism. The agent.test.ts already tests that createAgent
-// accepts options and passes them to ToolLoopAgent.

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for agent streaming functionality.
- * Tests the stream() method with MockLanguageModelV3.
- * Uses ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect } from 'vitest';
 import { createAgent } from '@agntk/core';
 import { createMockStreamModel } from './setup';

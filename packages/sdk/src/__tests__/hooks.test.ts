@@ -1,14 +1,3 @@
-/**
- * @agntk/core - Workflow Hooks Tests (SDK-HOOKS-008)
- *
- * Tests for:
- * - defineHook() typed hook factory
- * - HookRegistry — register, resume, reject, timeout
- * - createWebhook() webhook suspension
- * - sleep() durable delay wrapper
- * - Error classes (HookNotFoundError, HookNotPendingError, HookRejectedError)
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   defineHook,
@@ -24,18 +13,12 @@ import {
   HookRejectedError,
 } from '../workflow/hooks';
 
-// Allow async hook registration to complete (getWdk() yields via await even when cached)
 const tick = () => Promise.resolve();
-
-// ============================================================================
-// Setup / Teardown
-// ============================================================================
 
 beforeEach(() => {
   _resetHookRegistry();
   _resetHookCounter();
-  // Force WDK as "checked but unavailable" so tests use the in-memory fallback
-  // instead of attempting a dynamic import('workflow') which would find @workflow/core
+
   _resetWdkCache(true);
 });
 
@@ -44,10 +27,6 @@ afterEach(() => {
   _resetHookCounter();
   _resetWdkCache();
 });
-
-// ============================================================================
-// defineHook() Tests
-// ============================================================================
 
 describe('defineHook', () => {
   it('creates a typed hook factory with name and description', () => {
@@ -63,10 +42,7 @@ describe('defineHook', () => {
   });
 
   it('creates a hook with timeout and defaultValue', () => {
-    const hook = defineHook<
-      { action: string },
-      { approved: boolean }
-    >({
+    const hook = defineHook<{ action: string }, { approved: boolean }>({
       name: 'approval',
       timeout: '30m',
       defaultValue: { approved: false },
@@ -82,18 +58,15 @@ describe('defineHook', () => {
 
     const registry = getHookRegistry();
 
-    // Start waiting (won't resolve yet)
     const promise = hook.wait({ action: 'delete files' });
     await tick();
 
-    // Hook should be registered as pending
     const pending = registry.listPending();
     expect(pending.length).toBe(1);
     expect(pending[0].name).toBe('approval');
     expect(pending[0].status).toBe('pending');
     expect(pending[0].payload).toEqual({ action: 'delete files' });
 
-    // Resume it to clean up
     await registry.resume(pending[0].id, { approved: true });
     const result = await promise;
     expect(result).toEqual({ approved: true });
@@ -131,7 +104,6 @@ describe('defineHook', () => {
     expect(pending.length).toBe(2);
     expect(pending[0].id).not.toBe(pending[1].id);
 
-    // Clean up
     await registry.resume(pending[0].id, 'r1');
     await registry.resume(pending[1].id, 'r2');
     await p1;
@@ -150,13 +122,11 @@ describe('defineHook', () => {
     const promise = hook.wait({ msg: 'Approve this?' });
     await vi.advanceTimersByTimeAsync(0);
 
-    // Advance timer past the timeout
     vi.advanceTimersByTime(6000);
 
     const result = await promise;
     expect(result).toEqual({ approved: false, reason: 'Timed out' });
 
-    // The hook should be marked as timed_out
     const registry = getHookRegistry();
     const hooks = registry.list('timed_out');
     expect(hooks.length).toBe(1);
@@ -177,14 +147,12 @@ describe('defineHook', () => {
     const promise = hook.wait({});
     await vi.advanceTimersByTimeAsync(0);
 
-    // Resume before timeout
     const pending = registry.listPending();
     await registry.resume(pending[0].id, 'resolved!');
 
     const result = await promise;
     expect(result).toBe('resolved!');
 
-    // Advance past timeout — should not affect anything
     vi.advanceTimersByTime(15000);
 
     const hook0 = registry.get(pending[0].id);
@@ -209,23 +177,17 @@ describe('defineHook', () => {
 
     const pending = registry.listPending();
 
-    // Invalid payload should throw
-    await expect(registry.resume(pending[0].id, { count: -1 }))
-      .rejects.toThrow('Count must be non-negative');
+    await expect(registry.resume(pending[0].id, { count: -1 })).rejects.toThrow(
+      'Count must be non-negative',
+    );
 
-    // Hook should still be pending after failed validation
     expect(registry.get(pending[0].id)?.status).toBe('pending');
 
-    // Valid payload should work
     await registry.resume(pending[0].id, { count: 5 });
     const result = await promise;
     expect(result).toEqual({ count: 5 });
   });
 });
-
-// ============================================================================
-// HookRegistry Tests
-// ============================================================================
 
 describe('HookRegistry', () => {
   it('starts empty', () => {
@@ -253,10 +215,10 @@ describe('HookRegistry', () => {
 
     registry.register('dup-1', 'test', {});
 
-    expect(() => registry.register('dup-1', 'test', {}))
-      .toThrow('Hook with ID "dup-1" already exists');
+    expect(() => registry.register('dup-1', 'test', {})).toThrow(
+      'Hook with ID "dup-1" already exists',
+    );
 
-    // Clean up
     await registry.resume('dup-1', 'ok');
   });
 
@@ -278,8 +240,7 @@ describe('HookRegistry', () => {
   it('resume throws HookNotFoundError for unknown ID', async () => {
     const registry = new HookRegistry();
 
-    await expect(registry.resume('nonexistent', {}))
-      .rejects.toThrow(HookNotFoundError);
+    await expect(registry.resume('nonexistent', {})).rejects.toThrow(HookNotFoundError);
   });
 
   it('resume throws HookNotPendingError for already resolved hook', async () => {
@@ -288,8 +249,7 @@ describe('HookRegistry', () => {
     registry.register('rr-1', 'test', {});
     await registry.resume('rr-1', 'first');
 
-    await expect(registry.resume('rr-1', 'second'))
-      .rejects.toThrow(HookNotPendingError);
+    await expect(registry.resume('rr-1', 'second')).rejects.toThrow(HookNotPendingError);
   });
 
   it('reject transitions hook to rejected status', async () => {
@@ -302,7 +262,6 @@ describe('HookRegistry', () => {
     expect(instance.status).toBe('rejected');
     expect(instance.resolvedAt).toBeInstanceOf(Date);
 
-    // Promise should reject
     await expect(promise).rejects.toThrow(HookRejectedError);
     await expect(promise).rejects.toThrow('Not approved');
   });
@@ -310,8 +269,7 @@ describe('HookRegistry', () => {
   it('reject throws HookNotFoundError for unknown ID', () => {
     const registry = new HookRegistry();
 
-    expect(() => registry.reject('nonexistent', 'reason'))
-      .toThrow(HookNotFoundError);
+    expect(() => registry.reject('nonexistent', 'reason')).toThrow(HookNotFoundError);
   });
 
   it('listPending returns only pending hooks', async () => {
@@ -325,9 +283,8 @@ describe('HookRegistry', () => {
 
     const pending = registry.listPending();
     expect(pending.length).toBe(2);
-    expect(pending.map(h => h.id).sort()).toEqual(['p-1', 'p-3']);
+    expect(pending.map((h) => h.id).sort()).toEqual(['p-1', 'p-3']);
 
-    // Clean up
     await registry.resume('p-1', 'ok');
     await registry.resume('p-3', 'ok');
   });
@@ -360,10 +317,6 @@ describe('HookRegistry', () => {
     expect(registry.has('c-1')).toBe(false);
   });
 });
-
-// ============================================================================
-// Error Class Tests
-// ============================================================================
 
 describe('HookNotFoundError', () => {
   it('has correct properties', () => {
@@ -400,10 +353,6 @@ describe('HookRejectedError', () => {
   });
 });
 
-// ============================================================================
-// createWebhook() Tests
-// ============================================================================
-
 describe('createWebhook', () => {
   it('creates a webhook with auto-generated ID', async () => {
     const { id, promise } = createWebhook<{ approved: boolean }>({
@@ -415,7 +364,6 @@ describe('createWebhook', () => {
     const registry = getHookRegistry();
     expect(registry.has(id)).toBe(true);
 
-    // Resume the webhook
     await registry.resume(id, { approved: true });
 
     const result = await promise;
@@ -455,19 +403,12 @@ describe('createWebhook', () => {
   });
 });
 
-// ============================================================================
-// sleep() Tests
-// ============================================================================
-
 describe('sleep', () => {
   it('sleeps for the specified duration using setTimeout fallback', async () => {
-    // Uses real timers with a very short duration.
-    // The dynamic import('workflow') doesn't play well with fake timers.
     const start = Date.now();
     await sleep('1s', { reason: 'testing' });
     const elapsed = Date.now() - start;
 
-    // Should sleep for roughly 1 second (allow tolerance)
     expect(elapsed).toBeGreaterThanOrEqual(900);
     expect(elapsed).toBeLessThan(3000);
   }, 10000);
@@ -476,10 +417,6 @@ describe('sleep', () => {
     await expect(sleep('invalid')).rejects.toThrow('Invalid duration format');
   });
 });
-
-// ============================================================================
-// Global Registry Singleton Tests
-// ============================================================================
 
 describe('getHookRegistry singleton', () => {
   it('returns the same registry on repeated calls', () => {
@@ -501,10 +438,6 @@ describe('getHookRegistry singleton', () => {
   });
 });
 
-// ============================================================================
-// Integration: defineHook + HookRegistry resume flow
-// ============================================================================
-
 describe('Integration: full hook lifecycle', () => {
   it('defineHook → wait → resume → result', async () => {
     const approvalHook = defineHook<
@@ -517,14 +450,12 @@ describe('Integration: full hook lifecycle', () => {
 
     const registry = getHookRegistry();
 
-    // Start the approval flow
     const resultPromise = approvalHook.wait({
       action: 'delete',
       files: ['a.txt', 'b.txt'],
     });
     await tick();
 
-    // Verify the hook is pending
     const pending = registry.listPending();
     expect(pending.length).toBe(1);
     expect(pending[0].payload).toEqual({
@@ -532,7 +463,6 @@ describe('Integration: full hook lifecycle', () => {
       files: ['a.txt', 'b.txt'],
     });
 
-    // Simulate human approval
     await registry.resume(pending[0].id, {
       approved: true,
       reason: 'Looks safe',
@@ -573,7 +503,6 @@ describe('Integration: full hook lifecycle', () => {
 
     expect(registry.listPending().length).toBe(3);
 
-    // Resume in different order
     await registry.resume('step-2', true);
     await registry.resume('step-1', false);
     await registry.resume('step-3', true);

@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for durability features.
- * Tests durable tool wrapping, workflow availability detection,
- * parseDuration, and formatDuration.
- */
-
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { tool } from 'ai';
@@ -155,8 +149,11 @@ describe('Durability', () => {
       });
 
       const result = await agent.stream({ prompt: 'Test durability' });
-      // Drain the stream before reading text
-      for await (const _chunk of result.fullStream) { /* drain */ }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
       expect(text).toBe('Durable response text');
     });

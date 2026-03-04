@@ -1,7 +1,10 @@
+/**
+ * @fileoverview CLI-based glob tool implementation.
+ * Handles running ripgrep, find, or PowerShell commands to list files matching patterns.
+ */
 import { spawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
 
-import { createLogger } from '@agntk/logger';
 import {
   resolveGrepCli,
   type GrepBackend,
@@ -12,8 +15,6 @@ import {
   RG_FILES_FLAGS,
 } from './constants';
 import type { GlobOptions, GlobResult, FileMatch } from './types';
-
-const log = createLogger('@agntk/core:glob:cli');
 
 export interface ResolvedCli {
   path: string;
@@ -37,7 +38,6 @@ function buildRgArgs(options: GlobOptions): string[] {
   return args;
 }
 
-// Directories excluded from all glob searches (regardless of hidden flag)
 const EXCLUDED_DIRS = ['node_modules', '.turbo', 'dist', '.next', '.cache', 'coverage', '.git'];
 
 function buildFindArgs(options: GlobOptions): string[] {
@@ -46,7 +46,6 @@ function buildFindArgs(options: GlobOptions): string[] {
   const maxDepth = Math.min(options.maxDepth ?? DEFAULT_MAX_DEPTH, DEFAULT_MAX_DEPTH);
   args.push('-maxdepth', String(maxDepth));
 
-  // Prune common noise directories
   const pruneExprs = EXCLUDED_DIRS.map((dir) => ['-name', dir, '-prune', '-o']).flat();
   args.push('(', ...pruneExprs, '-true', ')');
 
@@ -83,14 +82,14 @@ async function getFileMtime(filePath: string): Promise<number> {
   try {
     const stats = await stat(filePath);
     return stats.mtime.getTime();
-  } catch (_e: unknown) {
+  } catch {
     return 0;
   }
 }
 
 export async function runRgFiles(
   options: GlobOptions,
-  resolvedCli?: ResolvedCli
+  resolvedCli?: ResolvedCli,
 ): Promise<GlobResult> {
   const cli = resolvedCli ?? resolveGrepCli();
   const timeout = Math.min(options.timeout ?? DEFAULT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
@@ -170,7 +169,9 @@ export async function runRgFiles(
       }
 
       const truncatedOutput = stdout.length >= DEFAULT_MAX_OUTPUT_BYTES;
-      const outputToProcess = truncatedOutput ? stdout.substring(0, DEFAULT_MAX_OUTPUT_BYTES) : stdout;
+      const outputToProcess = truncatedOutput
+        ? stdout.substring(0, DEFAULT_MAX_OUTPUT_BYTES)
+        : stdout;
 
       const lines = outputToProcess.trim().split('\n').filter(Boolean);
 

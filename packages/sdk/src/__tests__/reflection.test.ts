@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for reflection strategies.
- */
-
 import { describe, it, expect, vi } from 'vitest';
 import type { StepResult, ToolSet } from 'ai';
 
@@ -29,10 +25,6 @@ import {
   estimateReflectionTokens,
   type ReflectionConfig,
 } from '../reflection';
-
-// ============================================================================
-// buildReflectionPrompt
-// ============================================================================
 
 describe('buildReflectionPrompt', () => {
   describe('strategy: none', () => {
@@ -113,10 +105,6 @@ describe('buildReflectionPrompt', () => {
   });
 });
 
-// ============================================================================
-// createReflectionPrepareStep
-// ============================================================================
-
 describe('createReflectionPrepareStep', () => {
   const baseSystem = 'You are a helpful assistant.';
 
@@ -154,10 +142,6 @@ describe('createReflectionPrepareStep', () => {
   });
 });
 
-// ============================================================================
-// estimateReflectionTokens
-// ============================================================================
-
 describe('estimateReflectionTokens', () => {
   it('should return 0 for strategy: none', () => {
     expect(estimateReflectionTokens({ strategy: 'none' })).toBe(0);
@@ -166,7 +150,7 @@ describe('estimateReflectionTokens', () => {
   it('should return positive number for reflact', () => {
     const tokens = estimateReflectionTokens({ strategy: 'reflact' });
     expect(tokens).toBeGreaterThan(0);
-    // Default template is ~200 chars => ~50 tokens
+
     expect(tokens).toBeGreaterThan(20);
     expect(tokens).toBeLessThan(150);
   });
@@ -181,20 +165,14 @@ describe('estimateReflectionTokens', () => {
       strategy: 'reflact',
       promptTemplate: 'Short',
     });
-    expect(tokens).toBe(2); // 'Short' = 5 chars / 4 ≈ 2
+    expect(tokens).toBe(2);
   });
 });
 
-// ============================================================================
-// Integration with agent.ts
-// ============================================================================
-
 describe('agent reflection integration', () => {
   it('should accept reflection config in createAgent', async () => {
-    // Import dynamically to use mocked logger
     const { createAgent } = await import('../agent');
 
-    // This should not throw
     const agent = createAgent({
       name: 'reflection-test',
       reflection: { strategy: 'reflact' },

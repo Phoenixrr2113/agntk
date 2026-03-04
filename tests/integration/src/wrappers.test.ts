@@ -1,19 +1,9 @@
-/**
- * @fileoverview Integration tests for agent wrappers: best-of-n, reflection, usage limits, approval.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect } from 'vitest';
-import {
-  createAgent,
-  UsageLimitExceeded,
-  usageLimitStop,
-} from '@agntk/core';
+import { createAgent, UsageLimitExceeded, usageLimitStop } from '@agntk/core';
 import {
   withBestOfN,
   buildReflectionPrompt,
   estimateReflectionTokens,
-  applyApproval,
   resolveApprovalConfig,
   isDangerousTool,
   DANGEROUS_TOOLS,
@@ -34,8 +24,9 @@ describe('Wrappers', () => {
         maxSteps: 1,
       });
 
-      // Judge model returns a JSON ranking
-      const judgeModel = createMockModel('{"ranking": [2, 1], "reasoning": "Candidate 2 is more eloquent"}');
+      const judgeModel = createMockModel(
+        '{"ranking": [2, 1], "reasoning": "Candidate 2 is more eloquent"}',
+      );
 
       const result = await withBestOfN(agent, 'Write a greeting', {
         n: 2,

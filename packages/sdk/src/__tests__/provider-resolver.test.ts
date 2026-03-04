@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for the provider resolution cascade.
- */
-
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { resolveProvider, resetProviderCache } from '../provider-resolver';
 
@@ -10,7 +6,7 @@ describe('resolveProvider', () => {
 
   beforeEach(() => {
     resetProviderCache();
-    // Clear all provider-related keys
+
     delete process.env['OPENROUTER_API_KEY'];
     delete process.env['OPENAI_API_KEY'];
     delete process.env['CEREBRAS_API_KEY'];
@@ -22,10 +18,6 @@ describe('resolveProvider', () => {
     process.env = { ...originalEnv };
     vi.restoreAllMocks();
   });
-
-  // ==========================================================================
-  // BYOK Detection
-  // ==========================================================================
 
   describe('BYOK detection', () => {
     it('resolves OpenRouter when OPENROUTER_API_KEY is set', async () => {
@@ -81,10 +73,6 @@ describe('resolveProvider', () => {
     });
   });
 
-  // ==========================================================================
-  // Ollama Detection
-  // ==========================================================================
-
   describe('Ollama detection', () => {
     it('resolves Ollama when OLLAMA_ENABLED is set', async () => {
       process.env['OLLAMA_ENABLED'] = 'true';
@@ -96,11 +84,12 @@ describe('resolveProvider', () => {
 
     it('detects Ollama via probe when running with usable models', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'qwen3:8b' },
-          { name: 'qwen3:14b' },
-          { name: 'qwen3:32b' },
-        ] }), { status: 200 }),
+        new Response(
+          JSON.stringify({
+            models: [{ name: 'qwen3:8b' }, { name: 'qwen3:14b' }, { name: 'qwen3:32b' }],
+          }),
+          { status: 200 },
+        ),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -118,10 +107,9 @@ describe('resolveProvider', () => {
 
     it('skips Ollama when only sub-8b models installed', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'qwen3:0.6b' },
-          { name: 'qwen3:1.7b' },
-        ] }), { status: 200 }),
+        new Response(JSON.stringify({ models: [{ name: 'qwen3:0.6b' }, { name: 'qwen3:1.7b' }] }), {
+          status: 200,
+        }),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('agntk-free');
@@ -131,10 +119,10 @@ describe('resolveProvider', () => {
 
     it('uses cloud model when available alongside tiny local', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'qwen3:0.6b' },
-          { name: 'qwen3-coder:480b-cloud' },
-        ] }), { status: 200 }),
+        new Response(
+          JSON.stringify({ models: [{ name: 'qwen3:0.6b' }, { name: 'qwen3-coder:480b-cloud' }] }),
+          { status: 200 },
+        ),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -143,10 +131,10 @@ describe('resolveProvider', () => {
 
     it('prefers cloud over small local models', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'qwen3:1.7b' },
-          { name: 'gpt-oss:120b-cloud' },
-        ] }), { status: 200 }),
+        new Response(
+          JSON.stringify({ models: [{ name: 'qwen3:1.7b' }, { name: 'gpt-oss:120b-cloud' }] }),
+          { status: 200 },
+        ),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -155,9 +143,7 @@ describe('resolveProvider', () => {
 
     it('uses local 8b+ model when no cloud available', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'qwen3:8b' },
-        ] }), { status: 200 }),
+        new Response(JSON.stringify({ models: [{ name: 'qwen3:8b' }] }), { status: 200 }),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -165,9 +151,7 @@ describe('resolveProvider', () => {
 
     it('accepts non-qwen model >= 8b', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'llama3.1:70b' },
-        ] }), { status: 200 }),
+        new Response(JSON.stringify({ models: [{ name: 'llama3.1:70b' }] }), { status: 200 }),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -175,9 +159,9 @@ describe('resolveProvider', () => {
 
     it('accepts model with unknown size (assumes usable)', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ models: [
-          { name: 'deepseek-coder:latest' },
-        ] }), { status: 200 }),
+        new Response(JSON.stringify({ models: [{ name: 'deepseek-coder:latest' }] }), {
+          status: 200,
+        }),
       );
       const result = await resolveProvider();
       expect(result.provider).toBe('ollama');
@@ -206,7 +190,6 @@ describe('resolveProvider', () => {
     it('respects 500ms timeout on Ollama probe', async () => {
       const start = Date.now();
       vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
-        // Simulate a slow server that respects the abort signal
         return new Promise((_, reject) => {
           const timer = setTimeout(() => reject(new Error('timeout')), 5000);
           init?.signal?.addEventListener('abort', () => {
@@ -217,14 +200,10 @@ describe('resolveProvider', () => {
       });
       const result = await resolveProvider();
       const elapsed = Date.now() - start;
-      expect(elapsed).toBeLessThan(1500); // generous buffer for CI
+      expect(elapsed).toBeLessThan(1500);
       expect(result.provider).toBe('agntk-free');
     });
   });
-
-  // ==========================================================================
-  // Free Tier Fallback
-  // ==========================================================================
 
   describe('free tier fallback', () => {
     it('falls back to free tier when no keys and no Ollama', async () => {
@@ -236,19 +215,14 @@ describe('resolveProvider', () => {
     });
   });
 
-  // ==========================================================================
-  // Caching
-  // ==========================================================================
-
   describe('caching', () => {
     it('returns same result on subsequent calls', async () => {
       process.env['OPENROUTER_API_KEY'] = 'sk-or';
       const first = await resolveProvider();
       delete process.env['OPENROUTER_API_KEY'];
-      // resolveProvider is not cached (direct call), but getResolvedProvider is
-      // This tests that the function is deterministic
+
       const second = await resolveProvider();
-      // Without BYOK, it should fall through now
+
       expect(first.provider).toBe('openrouter');
       expect(second.provider).not.toBe('openrouter');
     });

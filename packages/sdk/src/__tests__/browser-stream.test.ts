@@ -1,20 +1,12 @@
-/**
- * @fileoverview Tests for BrowserStreamEmitter.
- * Tests frame capture lifecycle, input injection, and configuration.
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserStreamEmitter, createBrowserStream } from '../tools/browser/stream';
-import type { BrowserStreamConfig, InputEvent } from '../tools/browser/stream';
 
-// Mock the tool module
 vi.mock('../tools/browser/tool', () => ({
   isBrowserCliAvailable: vi.fn(),
   executeBrowserCommand: vi.fn(),
   buildCommand: vi.fn((...args: unknown[]) => ['mock-command', ...String(args[0]).split(',')]),
 }));
 
-// Mock node modules used by captureFrame
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn().mockResolvedValue(Buffer.from('fake-image-data')),
   unlink: vi.fn().mockResolvedValue(undefined),
@@ -108,7 +100,7 @@ describe('BrowserStreamEmitter', () => {
       emitter.setConfig({ fps: 8 });
       const config = emitter.getConfig();
       expect(config.fps).toBe(8);
-      expect(config.quality).toBe(70); // unchanged
+      expect(config.quality).toBe(70);
     });
   });
 
@@ -126,9 +118,7 @@ describe('BrowserStreamEmitter', () => {
       await emitter.start();
 
       expect(emitter.isRunning()).toBe(true);
-      expect(startedSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ fps: 2, quality: 60 }),
-      );
+      expect(startedSpy).toHaveBeenCalledWith(expect.objectContaining({ fps: 2, quality: 60 }));
     });
 
     it('should emit error if CLI is not available', async () => {
@@ -140,9 +130,7 @@ describe('BrowserStreamEmitter', () => {
       await emitter.start();
 
       expect(emitter.isRunning()).toBe(false);
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('agent-browser CLI not found'),
-      );
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('agent-browser CLI not found'));
     });
 
     it('should emit stopped event on stop', async () => {
@@ -163,12 +151,12 @@ describe('BrowserStreamEmitter', () => {
       emitter.on('started', startedSpy);
 
       await emitter.start();
-      await emitter.start(); // second start should be no-op
+      await emitter.start();
 
       expect(startedSpy).toHaveBeenCalledTimes(1);
 
       emitter.stop();
-      emitter.stop(); // second stop should be no-op
+      emitter.stop();
     });
   });
 
@@ -258,10 +246,8 @@ describe('BrowserStreamEmitter', () => {
 
       await emitter.start();
 
-      // Advance timer past one capture interval (500ms for 2 FPS)
       await vi.advanceTimersByTimeAsync(600);
 
-      // Frame should have been emitted
       expect(frameSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.any(String),
@@ -288,9 +274,7 @@ describe('BrowserStreamEmitter', () => {
       await emitter.start();
       await vi.advanceTimersByTimeAsync(600);
 
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Screenshot capture failed'),
-      );
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Screenshot capture failed'));
 
       emitter.stop();
     });
@@ -308,7 +292,6 @@ describe('BrowserStreamEmitter', () => {
 
       await vi.advanceTimersByTimeAsync(2000);
 
-      // No additional frames after stop
       expect(frameSpy.mock.calls.length).toBe(callCount);
     });
   });

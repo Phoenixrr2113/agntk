@@ -1,16 +1,10 @@
-/**
- * @fileoverview End-to-end tests for server + client with tool execution.
- * Starts a real HTTP server with an agent that has tools, verifies full round-trip.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { z } from 'zod';
 import { tool } from 'ai';
 import { createAgent } from '@agntk/core';
 import { createAgentServer } from '@agntk/server';
 import { AgentHttpClient } from '@agntk/client';
-import { createMockModel, createMockToolModel, createMockStreamModel } from './setup';
+import { createMockToolModel, createMockStreamModel } from './setup';
 
 const E2E_PORT = 4599;
 
@@ -28,9 +22,12 @@ describe('E2E: Server + Client with Tools', () => {
       }),
       execute: async ({ operation, a, b }) => {
         switch (operation) {
-          case 'add': return { result: a + b };
-          case 'subtract': return { result: a - b };
-          case 'multiply': return { result: a * b };
+          case 'add':
+            return { result: a + b };
+          case 'subtract':
+            return { result: a - b };
+          case 'multiply':
+            return { result: a * b };
         }
       },
     });
@@ -58,7 +55,7 @@ describe('E2E: Server + Client with Tools', () => {
   });
 
   afterAll(() => {
-    // Server cleanup handled by process exit
+    void 0;
   });
 
   describe('generate with tool execution', () => {
@@ -98,7 +95,7 @@ describe('E2E: Server + Client with Tools', () => {
 
       expect(response.ok).toBe(true);
       const text = await response.text();
-      // Should contain SSE events
+
       expect(text.length).toBeGreaterThan(0);
     });
   });

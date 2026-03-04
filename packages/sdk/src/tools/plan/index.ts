@@ -1,13 +1,7 @@
-// Tool exports
-export {
-  createPlanTool,
-  createValidationTool,
-} from './tools';
+export { createPlanTool, createValidationTool } from './tools';
 
-// Utility exports
 export { runTypeCheck, runTestCommand } from './utils';
 
-// Type exports
 export type {
   Plan,
   PlanStep,
@@ -19,7 +13,6 @@ export type {
   ValidationResult,
 } from './types';
 
-// Constant exports
 export {
   MAX_PLAN_STEPS,
   DELEGATION_THRESHOLD,

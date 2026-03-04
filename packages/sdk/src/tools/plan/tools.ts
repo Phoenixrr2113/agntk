@@ -4,15 +4,11 @@ import { createLogger } from '@agntk/logger';
 import { getToolConfig } from '../../config';
 import { success, error } from '../utils/tool-result';
 
-import { 
-  PLAN_DESCRIPTION, 
-  VALIDATION_DESCRIPTION,
-  AVAILABLE_AGENTS,
-} from './constants';
-import { 
-  planInputSchema, 
+import { PLAN_DESCRIPTION, VALIDATION_DESCRIPTION, AVAILABLE_AGENTS } from './constants';
+import {
+  planInputSchema,
   validationInputSchema,
-  type Plan, 
+  type Plan,
   type PlanToolConfig,
   type ScopeAssessment,
   type PendingDecision,
@@ -22,7 +18,6 @@ import { runTypeCheck, runTestCommand } from './utils';
 
 const log = createLogger('@agntk/core:plan');
 
-// Get config values with fallbacks
 function getPlanConfig() {
   const config = getToolConfig<{
     maxSteps?: number;
@@ -46,24 +41,27 @@ export function createPlanTool(config: PlanToolConfig = {}) {
       return error('Title and steps required for create action');
     }
     if (steps.length > planConfig.maxSteps) {
-      return error(`Too many steps. Maximum allowed: ${String(planConfig.maxSteps)}, provided: ${String(steps.length)}`);
+      return error(
+        `Too many steps. Maximum allowed: ${String(planConfig.maxSteps)}, provided: ${String(steps.length)}`,
+      );
     }
     currentPlan = {
       title,
-      steps: steps.map(name => ({ name, status: 'pending' })),
+      steps: steps.map((name) => ({ name, status: 'pending' })),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
 
     if (config.disableDelegation) {
-       return success({
+      return success({
         message: `Plan created: "${title}" with ${String(steps.length)} steps`,
         plan: currentPlan,
         scopeAssessment: {
           isLarge: false,
           stepCount: steps.length,
-          recommendation: 'Task created. Proceed with implementation (Delegation disabled for this agent).',
-        }
+          recommendation:
+            'Task created. Proceed with implementation (Delegation disabled for this agent).',
+        },
       });
     }
 
@@ -75,9 +73,9 @@ export function createPlanTool(config: PlanToolConfig = {}) {
       scopeAssessment = {
         isLarge: true,
         stepCount: steps.length,
-        recommendation: `⚠️ This task has ${steps.length} steps. Consider delegating the ENTIRE task to a specialized sub-agent. Pass the original user request along with any context you've gathered. Choose the most appropriate role based on the task type.`,
+        recommendation: `⚠️ This task has ${steps.length} steps. Consider delegating the ENTIRE task to a sub-agent. Pass the original user request along with any context you've gathered.`,
         availableAgents: [...AVAILABLE_AGENTS],
-        handoffExample: 'spawn_agent({ task: "<original user request + your context>", role: "<coder|researcher|analyst>" })',
+        handoffExample: 'spawn_agent({ task: "<original user request + your context>" })',
       };
     } else {
       scopeAssessment = {
@@ -89,7 +87,7 @@ export function createPlanTool(config: PlanToolConfig = {}) {
 
     if (scopeAssessment.isLarge) {
       pendingDecision = { required: true, stepCount: steps.length };
-      
+
       return success({
         message: `Plan created: "${title}" with ${String(steps.length)} steps`,
         plan: currentPlan,
@@ -97,8 +95,10 @@ export function createPlanTool(config: PlanToolConfig = {}) {
         DECISION_REQUIRED: {
           message: `⚠️ This plan has ${steps.length} steps - substantial work ahead.`,
           recommended: 'delegate',
-          reasoning: 'Delegation keeps your context window clean and lets specialized sub-agents focus on implementation while you coordinate.',
-          nextStep: 'Call plan({ action: "decide", decision: "delegate" }) to hand off, or decision: "proceed" if you have a specific reason to do it yourself.',
+          reasoning:
+            'Delegation keeps your context window clean and lets specialized sub-agents focus on implementation while you coordinate.',
+          nextStep:
+            'Call plan({ action: "decide", decision: "delegate" }) to hand off, or decision: "proceed" if you have a specific reason to do it yourself.',
         },
       });
     }
@@ -114,7 +114,7 @@ export function createPlanTool(config: PlanToolConfig = {}) {
     if (!currentPlan) {
       return success({ message: 'No active plan' });
     }
-    const completed = currentPlan.steps.filter(step => step.status === 'completed').length;
+    const completed = currentPlan.steps.filter((step) => step.status === 'completed').length;
     const total = currentPlan.steps.length;
     const percentage = Math.round((completed / total) * 100);
     return success({
@@ -123,17 +123,20 @@ export function createPlanTool(config: PlanToolConfig = {}) {
     });
   }
 
-  function handleUpdateStatus(stepName?: string, status?: 'pending' | 'in_progress' | 'completed' | 'blocked'): string {
+  function handleUpdateStatus(
+    stepName?: string,
+    status?: 'pending' | 'in_progress' | 'completed' | 'blocked',
+  ): string {
     if (!currentPlan || !stepName || !status) {
       return error('Active plan, stepName, and status required');
     }
-    const step = currentPlan.steps.find(s => s.name === stepName);
+    const step = currentPlan.steps.find((s) => s.name === stepName);
     if (!step) {
       return error(`Step not found: ${stepName}`);
     }
     step.status = status;
     currentPlan.updatedAt = Date.now();
-    const completedCount = currentPlan.steps.filter(s => s.status === 'completed').length;
+    const completedCount = currentPlan.steps.filter((s) => s.status === 'completed').length;
     return success({
       message: `Updated "${stepName}" to ${status}`,
       progress: `${String(completedCount)}/${String(currentPlan.steps.length)} completed`,
@@ -144,7 +147,7 @@ export function createPlanTool(config: PlanToolConfig = {}) {
     if (!currentPlan || !stepName || !note) {
       return error('Active plan, stepName, and note required');
     }
-    const noteStep = currentPlan.steps.find(s => s.name === stepName);
+    const noteStep = currentPlan.steps.find((s) => s.name === stepName);
     if (!noteStep) {
       return error(`Step not found: ${stepName}`);
     }
@@ -176,24 +179,26 @@ export function createPlanTool(config: PlanToolConfig = {}) {
     if (!decision) {
       return error('Decision required: "delegate" or "proceed"');
     }
-    
+
     const stepCount = pendingDecision.stepCount;
-    
+
     if (decision === 'delegate') {
       pendingDecision = null;
       return success({
         message: 'You chose to DELEGATE. Now use spawn_agent to hand off the entire task.',
-        nextAction: 'spawn_agent({ task: "<original user request + context>", role: "<coder|researcher|analyst>" })',
+        nextAction: 'spawn_agent({ task: "<original user request + context>" })',
         availableAgents: [...AVAILABLE_AGENTS],
       });
     } else {
       if (config.disableDelegation) {
-         pendingDecision = null;
-         return success({ message: 'Proceeding with task.' });
+        pendingDecision = null;
+        return success({ message: 'Proceeding with task.' });
       }
 
       const planConfig = getPlanConfig();
-      return error(`Cannot proceed on a ${stepCount}-step plan. Tasks with ${planConfig.delegationThreshold}+ steps MUST be delegated to a sub-agent. Call plan({ action: "decide", decision: "delegate" }) instead.`);
+      return error(
+        `Cannot proceed on a ${stepCount}-step plan. Tasks with ${planConfig.delegationThreshold}+ steps MUST be delegated to a sub-agent. Call plan({ action: "decide", decision: "delegate" }) instead.`,
+      );
     }
   }
 

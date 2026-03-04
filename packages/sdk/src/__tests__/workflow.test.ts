@@ -1,13 +1,3 @@
-/**
- * @agntk/core - Workflow Tests (Phase 2: Durability)
- *
- * Tests for:
- * - DurableAgent wrapper (SDK-DURABLE-006)
- * - Durable tool wrapping with step naming
- * - Workflow availability detection
- * - Duration helpers
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   wrapToolAsDurableStep,
@@ -25,12 +15,8 @@ import {
   formatDuration,
   _resetWorkflowCache,
 } from '../workflow/utils';
-import type { Agent } from '../types/agent';
-import type { Tool } from 'ai';
 
-// ============================================================================
-// Helpers
-// ============================================================================
+import type { Tool } from 'ai';
 
 function createMockTool(name: string): Tool {
   return {
@@ -39,25 +25,6 @@ function createMockTool(name: string): Tool {
     execute: vi.fn().mockResolvedValue(`${name} result`),
   } as unknown as Tool;
 }
-
-function createMockAgent(overrides: Partial<Agent> = {}): Agent {
-  return {
-    name: 'test-agent-001',
-    init: vi.fn().mockResolvedValue(undefined),
-    stream: vi.fn().mockResolvedValue({
-      fullStream: (async function* () {})(),
-      text: Promise.resolve('streamed text'),
-      usage: Promise.resolve({ inputTokens: 10, outputTokens: 20, totalTokens: 30 }),
-    }),
-    getSystemPrompt: vi.fn().mockReturnValue('You are a test agent.'),
-    getToolNames: vi.fn().mockReturnValue([]),
-    ...overrides,
-  } as Agent;
-}
-
-// ============================================================================
-// Durable Tool Tests
-// ============================================================================
 
 describe('wrapToolAsDurableStep', () => {
   it('wraps tool execute with durability', async () => {
@@ -227,10 +194,6 @@ describe('getStepName', () => {
   });
 });
 
-// ============================================================================
-// Duration Helper Tests
-// ============================================================================
-
 describe('parseDuration', () => {
   it('parses seconds', () => {
     expect(parseDuration('30s')).toBe(30000);
@@ -277,10 +240,6 @@ describe('formatDuration', () => {
   });
 });
 
-// ============================================================================
-// Workflow Availability Tests
-// ============================================================================
-
 describe('checkWorkflowAvailability', () => {
   beforeEach(() => {
     _resetWorkflowCache();
@@ -292,7 +251,7 @@ describe('checkWorkflowAvailability', () => {
 
   it('detects workflow package availability', async () => {
     const available = await checkWorkflowAvailability();
-    // `workflow` is installed as a peer dep in this workspace, so it resolves
+
     expect(typeof available).toBe('boolean');
   });
 
@@ -305,11 +264,8 @@ describe('checkWorkflowAvailability', () => {
   it('_resetWorkflowCache allows re-detection', async () => {
     await checkWorkflowAvailability();
     _resetWorkflowCache();
-    // After reset, re-detection should still work
+
     const result = await checkWorkflowAvailability();
     expect(typeof result).toBe('boolean');
   });
 });
-
-// createDurableAgent, DurableAgent, and related tests removed in Phase 4b.
-// The deprecated factory was deleted — use createAgent({ durable: true }) instead.

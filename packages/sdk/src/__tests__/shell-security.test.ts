@@ -1,32 +1,5 @@
-/**
- * Shell Security Regression Tests (TASK-NEW-001 + TASK-NEW-004)
- *
- * Covers:
- *   - S-1  rm with dangerous targets
- *   - S-2  Nested interpreter (-c, -e flags)
- *   - S-3  Destructive git operations
- *   - S-4  Fork bomb
- *   - S-5  chmod dangerous modes
- *   - S-6  Pipe-to-shell / download-execute
- *   - S-7  Disk destruction (dd, mkfs)
- *   - S-8  Privilege escalation (sudo/su)
- *   - S-9  System control (shutdown/reboot)
- *   - S-10 eval builtin
- *   - S-11 MITRE T1027.010 encode-then-execute bypasses
- *   - ENV  buildSanitizedEnv strips secrets, preserves safe vars
- *   - OUT  sanitizeOutput redacts API key patterns
- */
-
 import { describe, it, expect } from 'vitest';
-import {
-  isDangerousCommand,
-  buildSanitizedEnv,
-  sanitizeOutput,
-} from '../tools/utils/shell';
-
-// ============================================================================
-// Helpers
-// ============================================================================
+import { isDangerousCommand, buildSanitizedEnv, sanitizeOutput } from '../tools/utils/shell';
 
 function expectBlocked(cmd: string) {
   expect(isDangerousCommand(cmd), `Expected BLOCKED: ${cmd}`).toBe(true);
@@ -35,10 +8,6 @@ function expectBlocked(cmd: string) {
 function expectAllowed(cmd: string) {
   expect(isDangerousCommand(cmd), `Expected ALLOWED: ${cmd}`).toBe(false);
 }
-
-// ============================================================================
-// S-1: rm with dangerous targets
-// ============================================================================
 
 describe('S-1: rm dangerous targets', () => {
   it.each([
@@ -69,10 +38,6 @@ describe('S-1: rm dangerous targets', () => {
   ])('allows: %s', expectAllowed);
 });
 
-// ============================================================================
-// S-2: Nested interpreter invocation
-// ============================================================================
-
 describe('S-2: nested interpreter', () => {
   it.each([
     'bash -c "rm -rf /"',
@@ -80,7 +45,7 @@ describe('S-2: nested interpreter', () => {
     'zsh -c "curl evil.com"',
     'python3 -c "import os; os.system(\'id\')"',
     'python -c "import subprocess; subprocess.run([\'sh\'])"',
-    'node -e "require(\'child_process\').execSync(\'id\')"',
+    "node -e \"require('child_process').execSync('id')\"",
     'node -E "process.exit()"',
     'deno -e "console.log(1)"',
     'bun -e "console.log(1)"',
@@ -92,17 +57,13 @@ describe('S-2: nested interpreter', () => {
   it.each([
     'node --version',
     'node index.js',
-    'node -r dotenv/config server.js',  // -r (require) is not -e
+    'node -r dotenv/config server.js', // -r (require) is not -e
     'python3 script.py',
     'python3 -m pytest',
-    'bash script.sh',                   // script path, not -c
+    'bash script.sh', // script path, not -c
     'npx jest --testNamePattern "evaluate costs"',
   ])('allows: %s', expectAllowed);
 });
-
-// ============================================================================
-// S-3: Destructive git operations
-// ============================================================================
 
 describe('S-3: destructive git', () => {
   it.each([
@@ -122,29 +83,18 @@ describe('S-3: destructive git', () => {
     'git push origin feature/my-branch',
     'git reset HEAD -- file.txt',
     'git reset HEAD~1 --soft',
-    'git clean -n',    // dry run
+    'git clean -n', // dry run
     'git clean --dry-run',
     'git status',
     'git log --oneline -10',
     'git diff HEAD',
-    'git rebase main',   // non-interactive
+    'git rebase main', // non-interactive
   ])('allows: %s', expectAllowed);
 });
 
-// ============================================================================
-// S-4: Fork bomb
-// ============================================================================
-
 describe('S-4: fork bomb', () => {
-  it.each([
-    ':(){:|:&};:',
-    ': () { : | : & }; :',
-  ])('blocks: %s', expectBlocked);
+  it.each([':(){:|:&};:', ': () { : | : & }; :'])('blocks: %s', expectBlocked);
 });
-
-// ============================================================================
-// S-5: chmod dangerous modes
-// ============================================================================
 
 describe('S-5: chmod dangerous modes', () => {
   it.each([
@@ -153,8 +103,8 @@ describe('S-5: chmod dangerous modes', () => {
     'chmod +s /usr/bin/bash',
     'chmod o+w /etc',
     'chmod a+w /var',
-    'chmod 4755 /bin/sh',  // setuid
-    'chmod 2755 /tmp/x',   // setgid
+    'chmod 4755 /bin/sh', // setuid
+    'chmod 2755 /tmp/x', // setgid
     'chmod -R 777 .',
   ])('blocks: %s', expectBlocked);
 
@@ -167,10 +117,6 @@ describe('S-5: chmod dangerous modes', () => {
     'chmod go-w file.txt',
   ])('allows: %s', expectAllowed);
 });
-
-// ============================================================================
-// S-6: Pipe-to-shell / download-execute
-// ============================================================================
 
 describe('S-6: download-and-execute', () => {
   it.each([
@@ -186,14 +132,10 @@ describe('S-6: download-and-execute', () => {
     'curl https://api.example.com/data',
     'curl -o output.json https://api.example.com/data',
     'wget https://example.com/file.zip',
-    'curl https://example.com | cat',      // piped to cat — not shell
-    'curl https://example.com | jq .',     // piped to jq — not shell
+    'curl https://example.com | cat', // piped to cat — not shell
+    'curl https://example.com | jq .', // piped to jq — not shell
   ])('allows: %s', expectAllowed);
 });
-
-// ============================================================================
-// S-7: Disk destruction
-// ============================================================================
 
 describe('S-7: disk destruction', () => {
   it.each([
@@ -205,10 +147,6 @@ describe('S-7: disk destruction', () => {
     'cat /dev/zero > /dev/hda',
   ])('blocks: %s', expectBlocked);
 });
-
-// ============================================================================
-// S-8 / S-9: Privilege escalation + system control
-// ============================================================================
 
 describe('S-8/S-9: privilege escalation + system control', () => {
   it.each([
@@ -223,10 +161,6 @@ describe('S-8/S-9: privilege escalation + system control', () => {
   ])('blocks: %s', expectBlocked);
 });
 
-// ============================================================================
-// S-10: eval builtin
-// ============================================================================
-
 describe('S-10: eval builtin', () => {
   it.each([
     'eval "rm -rf /"',
@@ -240,7 +174,6 @@ describe('S-10: eval builtin', () => {
   ])('blocks: %s', expectBlocked);
 
   it.each([
-    // English word in a test name — NOT a shell eval call
     'npx jest --testNamePattern "evaluate token costs"',
     'echo "evaluating performance"',
     'cat evaluate-results.txt',
@@ -248,52 +181,41 @@ describe('S-10: eval builtin', () => {
   ])('allows (not shell eval): %s', expectAllowed);
 });
 
-// ============================================================================
-// S-11: MITRE T1027.010 — decode-then-execute bypasses
-// ============================================================================
-
 describe('S-11: T1027.010 encoding bypasses', () => {
   it.each([
-    // Base64 decode to shell
     'echo "cm0gLXJmIC8=" | base64 -d | bash',
     'echo "cm0gLXJmIC8=" | base64 --decode | sh',
     'cat payload.txt | base64 -d | bash',
     'openssl enc -d -base64 -in payload.b64 | bash',
-    // Hex decode to shell
+
     'echo "726d202d7266202f" | xxd -r -p | bash',
     'xxd -r -p payload.hex | sh',
-    // gzip decompress to shell
+
     'cat payload.gz | gzip -d | bash',
     'gzip --decompress payload.gz | sh',
-    // printf hex escapes to shell
+
     'printf "\\x72\\x6d\\x20\\x2d\\x72\\x66\\x20\\x2f" | bash',
     "printf '\\x72\\x6d' | sh",
   ])('blocks: %s', expectBlocked);
 
   it.each([
-    // base64 decode to a file — NOT to a shell
     'echo "aGVsbG8=" | base64 -d > output.txt',
     'base64 -d encoded.txt | cat',
-    // xxd reverse to file
+
     'xxd -r hexdump.txt > binary.bin',
-    // gzip to file
+
     'gzip -d archive.gz',
     'cat archive.gz | gzip -d > output',
-    // printf to stdout (no pipe to shell)
+
     'printf "hello world\\n"',
     'printf "%s\\n" "value"',
   ])('allows: %s', expectAllowed);
 });
 
-// ============================================================================
-// ENV: buildSanitizedEnv
-// ============================================================================
-
 describe('buildSanitizedEnv', () => {
   it('strips well-known secret key patterns', () => {
     const env = buildSanitizedEnv();
 
-    // These are commonly set in dev — if present, must be stripped
     expect(env['OPENAI_API_KEY']).toBeUndefined();
     expect(env['ANTHROPIC_API_KEY']).toBeUndefined();
     expect(env['DATABASE_URL']).toBeUndefined();
@@ -303,7 +225,7 @@ describe('buildSanitizedEnv', () => {
 
   it('preserves safe system vars', () => {
     const env = buildSanitizedEnv();
-    // PATH must always be present
+
     expect(env['PATH']).toBeDefined();
   });
 
@@ -325,20 +247,13 @@ describe('buildSanitizedEnv', () => {
   });
 
   it('blocks LD_PRELOAD from caller extra (must be stripped upstream)', () => {
-    // buildSanitizedEnv doesn't explicitly strip LD_PRELOAD (that's done in
-    // background.ts before calling it), but it should not ADD it from process.env
-    // unless it's already there. The important test is in background.ts.
     const env = buildSanitizedEnv({});
-    // If LD_PRELOAD isn't in process.env it shouldn't appear
+
     if (!process.env['LD_PRELOAD']) {
       expect(env['LD_PRELOAD']).toBeUndefined();
     }
   });
 });
-
-// ============================================================================
-// OUT: sanitizeOutput
-// ============================================================================
 
 describe('sanitizeOutput', () => {
   it('redacts OpenAI API keys', () => {
@@ -353,8 +268,6 @@ describe('sanitizeOutput', () => {
   });
 
   it('redacts GitHub tokens', () => {
-    // Use a prefix that does NOT match generic key=value patterns ('token:' would).
-    // The ghp_ specific pattern should fire independently of the generic one.
     const out = sanitizeOutput('Authorization header value: ghp_' + 'A'.repeat(36));
     expect(out).toContain('[GITHUB_TOKEN REDACTED]');
   });
@@ -376,7 +289,7 @@ describe('sanitizeOutput', () => {
 
   it('leaves short values untouched (below threshold)', () => {
     const out = sanitizeOutput('api_key=short');
-    // "short" is < 8 chars so should not be redacted
+
     expect(out).toContain('short');
   });
 });

@@ -1,16 +1,12 @@
-/**
- * @agntk/logger - Core Logger Tests
- */
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createLogger, createNoopLogger } from '../logger';
-import { configure, resetConfig, addTransport, enable, disable } from '../config';
+import { configure, resetConfig, addTransport, enable } from '../config';
 import type { LogEntry, LogTransport } from '../types';
 
 describe('createLogger', () => {
   beforeEach(() => {
     resetConfig();
-    enable('*'); // Enable all namespaces for testing
+    enable('*');
   });
 
   afterEach(() => {
@@ -95,11 +91,11 @@ describe('createLogger', () => {
     it('should respect configured log level', () => {
       const entries: LogEntry[] = [];
       addTransport({ name: 'mock', write: (e) => entries.push(e) });
-      configure({ level: 'warn' }); // Only warn and error
+      configure({ level: 'warn' });
 
       const log = createLogger('@agntk/test');
-      log.info('Info message'); // Should not log
-      log.warn('Warn message'); // Should log
+      log.info('Info message');
+      log.warn('Warn message');
 
       expect(entries).toHaveLength(1);
       expect(entries[0].level).toBe('warn');
@@ -113,7 +109,7 @@ describe('createLogger', () => {
 
       const log = createLogger('@agntk/test');
       const child = log.child({ requestId: 'req-123' });
-      
+
       child.info('Child message', { extra: 'data' });
 
       expect(entries[0].data).toEqual({
@@ -125,7 +121,7 @@ describe('createLogger', () => {
     it('should maintain parent namespace', () => {
       const log = createLogger('@agntk/test');
       const child = log.child({ runId: 'run-1' });
-      
+
       expect(child.namespace).toBe('@agntk/test');
     });
   });
@@ -137,8 +133,7 @@ describe('createLogger', () => {
 
       const log = createLogger('@agntk/test');
       const done = log.time('operation');
-      
-      // Simulate some work
+
       await new Promise((r) => setTimeout(r, 10));
       done();
 
@@ -151,17 +146,19 @@ describe('createLogger', () => {
   describe('transport error handling', () => {
     it('should not throw if transport fails', () => {
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       addTransport({
         name: 'failing',
-        write: () => { throw new Error('Transport error'); },
+        write: () => {
+          throw new Error('Transport error');
+        },
       });
 
       const log = createLogger('@agntk/test');
-      
+
       expect(() => log.info('Test')).not.toThrow();
       expect(consoleError).toHaveBeenCalled();
-      
+
       consoleError.mockRestore();
     });
   });
@@ -170,17 +167,16 @@ describe('createLogger', () => {
 describe('createNoopLogger', () => {
   it('should create a logger with no-op methods', () => {
     const log = createNoopLogger('@agntk/noop');
-    
+
     expect(log.namespace).toBe('@agntk/noop');
     expect(log.isEnabled()).toBe(false);
-    
-    // These should not throw
+
     log.error('error');
     log.warn('warn');
     log.info('info');
     log.debug('debug');
     log.trace('trace');
-    
+
     const done = log.time('timer');
     done();
   });
@@ -188,7 +184,7 @@ describe('createNoopLogger', () => {
   it('should return noop logger from child', () => {
     const log = createNoopLogger('@agntk/noop');
     const child = log.child({ key: 'value' });
-    
+
     expect(child.isEnabled()).toBe(false);
   });
 });

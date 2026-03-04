@@ -1,7 +1,3 @@
-/**
- * @agntk/logger - Formatter Tests
- */
-
 import { describe, it, expect } from 'vitest';
 import { formatPretty, formatJSON, formatSSE } from '../formatter';
 import type { LogEntry } from '../types';
@@ -67,7 +63,6 @@ describe('formatPretty', () => {
     const entry = createEntry();
     const result = formatPretty(entry, true);
 
-    // Check for ANSI escape sequences
     expect(result).toContain('\x1b[');
   });
 });
@@ -110,7 +105,6 @@ describe('formatSSE', () => {
     const entry = createEntry();
     const result = formatSSE(entry);
 
-    // Extract the data line
     const dataLine = result.split('\n').find((line) => line.startsWith('data: '));
     expect(dataLine).toBeDefined();
 

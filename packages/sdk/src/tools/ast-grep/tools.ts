@@ -37,14 +37,8 @@ const astGrepSearchInputSchema = z.object({
     .string()
     .describe('AST pattern with meta-variables ($VAR, $$$). Must be complete AST node.'),
   lang: languageEnum.describe('Target language'),
-  paths: z
-    .array(z.string())
-    .optional()
-    .describe('Paths to search (default: ["."])'),
-  globs: z
-    .array(z.string())
-    .optional()
-    .describe('Include/exclude globs (prefix ! to exclude)'),
+  paths: z.array(z.string()).optional().describe('Paths to search (default: ["."])'),
+  globs: z.array(z.string()).optional().describe('Include/exclude globs (prefix ! to exclude)'),
   context: z.number().optional().describe('Context lines around match'),
 });
 

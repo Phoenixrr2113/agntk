@@ -1,9 +1,4 @@
-/**
- * @fileoverview Tests for the withBestOfN wrapper.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MockLanguageModelV3, mockValues } from 'ai/test';
 import type { LanguageModel } from 'ai';
 import type { Agent } from '../types/agent';
@@ -19,10 +14,6 @@ vi.mock('@agntk/logger', () => ({
 }));
 
 import { withBestOfN } from '../wrappers/best-of-n';
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function createMockAgent(outputs: string[]): Agent {
   let callIndex = 0;
@@ -40,13 +31,10 @@ function createMockAgent(outputs: string[]): Agent {
     }),
     getSystemPrompt: () => 'test prompt',
     getToolNames: () => [],
+    getModelId: () => 'mock-model',
   } as unknown as Agent;
 }
 
-/**
- * Create a MockLanguageModelV3 judge that returns the given text response.
- * Uses mockValues to support multiple sequential calls.
- */
 function createMockJudge(...responses: string[]): LanguageModel {
   return new MockLanguageModelV3({
     doGenerate: mockValues(
@@ -63,9 +51,6 @@ function createMockJudge(...responses: string[]): LanguageModel {
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a MockLanguageModelV3 judge that always rejects (throws).
- */
 function createFailingJudge(): LanguageModel {
   return new MockLanguageModelV3({
     doGenerate: async () => {
@@ -73,10 +58,6 @@ function createFailingJudge(): LanguageModel {
     },
   }) as unknown as LanguageModel;
 }
-
-// ============================================================================
-// Basic functionality
-// ============================================================================
 
 describe('withBestOfN', () => {
   it('should run agent N times and return candidates', async () => {
@@ -119,7 +100,6 @@ describe('withBestOfN', () => {
       criteria: 'Quality',
     });
 
-    // Each run: 100 input, 50 output, 150 total
     expect(result.totalUsage.inputTokens).toBe(200);
     expect(result.totalUsage.outputTokens).toBe(100);
     expect(result.totalUsage.totalTokens).toBe(300);
@@ -127,7 +107,7 @@ describe('withBestOfN', () => {
 
   it('should handle single candidate without judging', async () => {
     const agent = createMockAgent(['only output']);
-    // Judge won't be called for n=1, but we still need to provide one
+
     const judge = createMockJudge('1:10');
 
     const result = await withBestOfN(agent, 'test', {
@@ -142,10 +122,6 @@ describe('withBestOfN', () => {
   });
 });
 
-// ============================================================================
-// List-wise judging
-// ============================================================================
-
 describe('list-wise strategy', () => {
   it('should rank all outputs in a single call', async () => {
     const agent = createMockAgent(['a', 'b', 'c']);
@@ -158,10 +134,10 @@ describe('list-wise strategy', () => {
       strategy: 'list-wise',
     });
 
-    expect(result.best.text).toBe('c'); // Output 3 scored highest
-    expect(result.candidates.find(c => c.text === 'a')!.score).toBe(7);
-    expect(result.candidates.find(c => c.text === 'b')!.score).toBe(4);
-    expect(result.candidates.find(c => c.text === 'c')!.score).toBe(9);
+    expect(result.best.text).toBe('c');
+    expect(result.candidates.find((c) => c.text === 'a')!.score).toBe(7);
+    expect(result.candidates.find((c) => c.text === 'b')!.score).toBe(4);
+    expect(result.candidates.find((c) => c.text === 'c')!.score).toBe(9);
   });
 
   it('should handle judge errors gracefully', async () => {
@@ -175,21 +151,16 @@ describe('list-wise strategy', () => {
       strategy: 'list-wise',
     });
 
-    // Should fallback to equal scores
     expect(result.candidates).toHaveLength(2);
     expect(result.candidates[0].score).toBe(5);
     expect(result.candidates[1].score).toBe(5);
   });
 });
 
-// ============================================================================
-// Pair-wise judging
-// ============================================================================
-
 describe('pair-wise strategy', () => {
   it('should compare pairs and accumulate wins', async () => {
     const agent = createMockAgent(['weak', 'medium', 'strong']);
-    // For 3 candidates, there are 3 pairs: (0,1), (0,2), (1,2)
+
     const judge = createMockJudge('B', 'B', 'B');
 
     const result = await withBestOfN(agent, 'test', {
@@ -199,7 +170,6 @@ describe('pair-wise strategy', () => {
       strategy: 'pair-wise',
     });
 
-    // strong wins 2, medium wins 1, weak wins 0
     expect(result.best.text).toBe('strong');
     expect(result.best.score).toBe(2);
   });
@@ -215,15 +185,10 @@ describe('pair-wise strategy', () => {
       strategy: 'pair-wise',
     });
 
-    // Both should get 0.5 from tie
     expect(result.candidates[0].score).toBe(0.5);
     expect(result.candidates[1].score).toBe(0.5);
   });
 });
-
-// ============================================================================
-// Execution modes
-// ============================================================================
 
 describe('execution modes', () => {
   it('should run in parallel by default', async () => {
@@ -252,10 +217,9 @@ describe('execution modes', () => {
       execution: 'parallel',
     });
 
-    // All 3 should start within ~10ms of each other (parallel)
     expect(startTimes).toHaveLength(3);
     const spread = Math.max(...startTimes) - Math.min(...startTimes);
-    expect(spread).toBeLessThan(30); // Should be nearly simultaneous
+    expect(spread).toBeLessThan(30);
   });
 
   it('should run sequentially when specified', async () => {
@@ -289,10 +253,6 @@ describe('execution modes', () => {
     expect(callOrder).toEqual([0, 1, 2]);
   });
 });
-
-// ============================================================================
-// Budget caps
-// ============================================================================
 
 describe('budget cap', () => {
   it('should stop early when budget exceeded (sequential)', async () => {
@@ -329,10 +289,6 @@ describe('budget cap', () => {
   });
 });
 
-// ============================================================================
-// Error handling
-// ============================================================================
-
 describe('error handling', () => {
   it('should handle failed agent runs gracefully', async () => {
     let callCount = 0;
@@ -359,7 +315,6 @@ describe('error handling', () => {
       criteria: 'Quality',
     });
 
-    // Should have 2 successful candidates (1 failed)
     expect(result.candidates).toHaveLength(2);
     expect(result.runsCompleted).toBe(2);
   });

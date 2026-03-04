@@ -1,31 +1,9 @@
-/**
- * @fileoverview Integration tests for the markdown-based memory system.
- *
- * Validates:
- * - MarkdownMemoryStore works end-to-end
- * - createMemoryTools produces usable tools
- * - createAgent includes memory tools by default
- * - Memory context loading via loadMemoryContext
- */
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import {
-  MarkdownMemoryStore,
-  loadMemoryContext,
-  createAgent,
-} from '@agntk/core';
-import {
-  createMemoryTools,
-  createSearchSkillsTool,
-  clearSkillsCache,
-} from '@agntk/core/advanced';
-
-// ============================================================================
-// Helpers
-// ============================================================================
+import { MarkdownMemoryStore, loadMemoryContext, createAgent } from '@agntk/core';
+import { createSearchSkillsTool, clearSkillsCache } from '@agntk/core/advanced';
 
 let workspaceDir: string;
 let globalDir: string;
@@ -34,10 +12,6 @@ async function createTempDirs() {
   workspaceDir = await mkdtemp(join(tmpdir(), 'agntk-integration-'));
   globalDir = await mkdtemp(join(tmpdir(), 'agntk-integration-global-'));
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 describe('Memory', () => {
   beforeEach(async () => {
@@ -50,17 +24,6 @@ describe('Memory', () => {
   });
 
   describe('MarkdownMemoryStore lifecycle', () => {
-    it('should save and load memory', async () => {
-      const store = new MarkdownMemoryStore({
-        workspaceRoot: workspaceDir,
-        globalDir: join(globalDir, '.agntk'),
-      });
-
-      await store.saveMemory('# Memory\n- TypeScript is typed');
-      const result = await store.loadMemory();
-      expect(result).toContain('TypeScript is typed');
-    });
-
     it('should handle project fallback to CLAUDE.md', async () => {
       await writeFile(join(workspaceDir, 'CLAUDE.md'), '# Claude Config\nUse strict mode', 'utf-8');
 
@@ -86,6 +49,17 @@ describe('Memory', () => {
       expect(decisions).toContain('Decision 1');
       expect(decisions).toContain('Decision 2');
     });
+
+    it('should save and load context', async () => {
+      const store = new MarkdownMemoryStore({
+        workspaceRoot: workspaceDir,
+        globalDir: join(globalDir, '.agntk'),
+      });
+
+      await store.saveContext('Working on integration tests');
+      const context = await store.loadContext();
+      expect(context).toContain('Working on integration tests');
+    });
   });
 
   describe('loadMemoryContext', () => {
@@ -105,90 +79,42 @@ describe('Memory', () => {
         globalDir: join(globalDir, '.agntk'),
       });
 
-      // Write project and memory files
-      await store.saveMemory('- Fact one\n- Fact two');
       await store.saveContext('Working on tests');
 
       const result = await loadMemoryContext(store);
       expect(result).toContain('# Persistent Memory');
-      expect(result).toContain('## Memory');
       expect(result).toContain('## Current Context');
     });
   });
 
-  describe('createMemoryTools', () => {
-    it('should create 4 tools', () => {
-      const store = new MarkdownMemoryStore({
-        workspaceRoot: workspaceDir,
-        globalDir: join(globalDir, '.agntk'),
-      });
-
-      const tools = createMemoryTools({ store });
-      const toolNames = Object.keys(tools).sort();
-      expect(toolNames).toEqual(['forget', 'recall', 'remember', 'update_context']);
-    });
-
-    it('remember tool should write to store (no-model path)', async () => {
-      const store = new MarkdownMemoryStore({
-        workspaceRoot: workspaceDir,
-        globalDir: join(globalDir, '.agntk'),
-      });
-
-      const tools = createMemoryTools({ store });
-      const resultStr = await tools.remember.execute(
-        { text: 'Integration test fact' },
-        { toolCallId: 'tc1', messages: [], abortSignal: undefined as unknown as AbortSignal },
-      );
-      const result = JSON.parse(resultStr as string);
-      expect(result.success).toBe(true);
-
-      const memory = await store.loadMemory();
-      expect(memory).toContain('Integration test fact');
-    });
-
-    it('recall tool should find stored facts', async () => {
-      const store = new MarkdownMemoryStore({
-        workspaceRoot: workspaceDir,
-        globalDir: join(globalDir, '.agntk'),
-      });
-
-      await store.saveMemory('# Memory\n\n## World Facts\n- TypeScript uses static typing\n\n## Decisions');
-
-      const tools = createMemoryTools({ store });
-      const resultStr = await tools.recall.execute(
-        { query: 'TypeScript static' },
-        { toolCallId: 'tc2', messages: [], abortSignal: undefined as unknown as AbortSignal },
-      );
-      const result = JSON.parse(resultStr as string);
-      expect(result.success).toBe(true);
-      expect(result.results.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('createAgent (memory always on)', () => {
-    it('should create agent with memory tools included', () => {
+  describe('createAgent (workspace-based)', () => {
+    it('should create agent with task-based tools', () => {
       const agent = createAgent({
-        name: 'memory-test-agent',
+        name: 'workspace-test-agent',
         workspaceRoot: workspaceDir,
       });
 
       expect(agent).toBeDefined();
-      expect(agent.name).toBe('memory-test-agent');
+      expect(agent.name).toBe('workspace-test-agent');
       expect(typeof agent.init).toBe('function');
       expect(typeof agent.stream).toBe('function');
-      // Memory tools should be included automatically
+
       const toolNames = agent.getToolNames();
-      expect(toolNames).toContain('remember');
-      expect(toolNames).toContain('recall');
+      expect(toolNames).toContain('spawn_agent');
+      expect(toolNames).toContain('check_agent');
+
+      expect(toolNames).not.toContain('remember');
+      expect(toolNames).not.toContain('recall');
+      expect(toolNames).not.toContain('forget');
+      expect(toolNames).not.toContain('update_context');
     });
 
     it('should have init method that resolves', async () => {
       const agent = createAgent({
-        name: 'memory-init-agent',
+        name: 'workspace-init-agent',
         workspaceRoot: workspaceDir,
       });
 
-      // init() should complete without error even when no files exist
       await expect(agent.init()).resolves.toBeUndefined();
     });
   });

@@ -6,7 +6,10 @@ import { homedir } from 'node:os';
 
 const RG_VERSION = '14.1.1';
 
-const PLATFORM_CONFIG: Record<string, { platform: string; extension: 'tar.gz' | 'zip' } | undefined> = {
+const PLATFORM_CONFIG: Record<
+  string,
+  { platform: string; extension: 'tar.gz' | 'zip' } | undefined
+> = {
   'arm64-darwin': { platform: 'aarch64-apple-darwin', extension: 'tar.gz' },
   'arm64-linux': { platform: 'aarch64-unknown-linux-gnu', extension: 'tar.gz' },
   'x64-darwin': { platform: 'x86_64-apple-darwin', extension: 'tar.gz' },
@@ -36,7 +39,7 @@ function findFileRecursive(dir: string, filename: string): string | null {
         return join(entry.parentPath ?? dir, entry.name);
       }
     }
-  } catch (_e: unknown) {
+  } catch {
     return null;
   }
   return null;
@@ -52,7 +55,10 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
   await writeFile(destPath, Buffer.from(buffer));
 }
 
-async function spawnAsync(command: string[], cwd?: string): Promise<{ exitCode: number; stderr: string }> {
+async function spawnAsync(
+  command: string[],
+  cwd?: string,
+): Promise<{ exitCode: number; stderr: string }> {
   return new Promise((resolve) => {
     const [cmd, ...args] = command;
     const proc = spawn(cmd!, args, {
@@ -178,8 +184,8 @@ export async function downloadAndInstallRipgrep(): Promise<string> {
     if (existsSync(archivePath)) {
       try {
         unlinkSync(archivePath);
-      } catch (_e: unknown) {
-        // Cleanup failures are non-critical
+      } catch {
+        void 0;
       }
     }
   }

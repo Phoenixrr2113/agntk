@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:tools": "vitest run src/tools/",
+    "test:pipeline": "vitest run src/pipeline/",
+    "test:cli": "vitest run src/cli/",
+    "test:regression": "vitest run src/tools/ src/pipeline/ src/cli/"
   },
   "devDependencies": {
     "@agntk/core": "workspace:*",

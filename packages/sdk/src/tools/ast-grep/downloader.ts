@@ -4,12 +4,9 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { createRequire } from 'node:module';
-import { dirname } from 'node:path';
 
 const REPO = 'ast-grep/ast-grep';
 
-// IMPORTANT: Update this when bumping @ast-grep/cli in package.json
-// This is only used as fallback when @ast-grep/cli package.json cannot be read
 const DEFAULT_VERSION = '0.40.0';
 
 function getAstGrepVersion(): string {
@@ -17,7 +14,7 @@ function getAstGrepVersion(): string {
     const require = createRequire(import.meta.url);
     const pkg = require('@ast-grep/cli/package.json') as { version: string };
     return pkg.version;
-  } catch (_e: unknown) {
+  } catch {
     return DEFAULT_VERSION;
   }
 }
@@ -58,7 +55,10 @@ export function getCachedBinaryPath(): string | null {
   return existsSync(binaryPath) ? binaryPath : null;
 }
 
-async function spawnAsync(command: string[], cwd?: string): Promise<{ exitCode: number; stderr: string }> {
+async function spawnAsync(
+  command: string[],
+  cwd?: string,
+): Promise<{ exitCode: number; stderr: string }> {
   return new Promise((resolve) => {
     const [cmd, ...args] = command;
     const proc = spawn(cmd!, args, {
@@ -99,7 +99,9 @@ async function extractZip(archivePath: string, destDir: string): Promise<void> {
       process.platform === 'win32'
         ? 'Ensure PowerShell is available on your system.'
         : "Please install 'unzip' (e.g., apt install unzip, brew install unzip).";
-    throw new Error(`zip extraction failed (exit ${result.exitCode}): ${result.stderr}\n\n${toolHint}`);
+    throw new Error(
+      `zip extraction failed (exit ${result.exitCode}): ${result.stderr}\n\n${toolHint}`,
+    );
   }
 }
 
@@ -155,7 +157,9 @@ export async function downloadAstGrep(version: string = DEFAULT_VERSION): Promis
 
     return binaryPath;
   } catch (err) {
-    console.error(`[agent] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`);
+    console.error(
+      `[agent] Failed to download ast-grep: ${err instanceof Error ? err.message : err}`,
+    );
     return null;
   }
 }

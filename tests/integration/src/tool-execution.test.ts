@@ -1,9 +1,3 @@
-/**
- * @fileoverview Integration tests for agent tool execution.
- * Tests the full tool loop: model calls tool -> tool executes -> model gets result -> final response.
- * Uses MockLanguageModelV3 from ai/test per official AI SDK testing guidance.
- */
-
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { tool } from 'ai';
@@ -32,8 +26,11 @@ describe('Tool Execution', () => {
       });
 
       const result = await agent.stream({ prompt: 'What is the weather in London?' });
-      // Drain the stream
-      for await (const _chunk of result.fullStream) { /* drain */ }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
 
       expect(text).toBe('The weather in London is sunny and 22°C.');
@@ -59,8 +56,11 @@ describe('Tool Execution', () => {
       });
 
       const result = await agent.stream({ prompt: 'Add 5 and 3' });
-      // Drain the stream
-      for await (const _chunk of result.fullStream) { /* drain */ }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
 
       expect(text).toBe('The result is 8.');
@@ -90,7 +90,11 @@ describe('Tool Execution', () => {
       });
 
       const result = await agent.stream({ prompt: 'Use the failing tool' });
-      for await (const _chunk of result.fullStream) { /* drain */ }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
       expect(text).toBeDefined();
     });
@@ -120,7 +124,11 @@ describe('Tool Execution', () => {
       });
 
       const result = await agent.stream({ prompt: 'Create user John, age 30' });
-      for await (const _chunk of result.fullStream) { /* drain */ }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
       expect(text).toContain('John');
     });
@@ -144,7 +152,11 @@ describe('Tool Execution', () => {
       });
 
       const result = await agent.stream({ prompt: 'Just respond without tools' });
-      for await (const _chunk of result.fullStream) { /* drain */ }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of result.fullStream) {
+        void 0;
+      }
       const text = await result.text;
       expect(text).toBe('Direct response without any tools.');
     });

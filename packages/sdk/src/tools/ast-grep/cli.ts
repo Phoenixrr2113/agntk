@@ -153,12 +153,14 @@ export async function runSg(options: RunOptions): Promise<SgResult> {
       }
 
       const outputTruncated = stdout.length >= DEFAULT_MAX_OUTPUT_BYTES;
-      const outputToProcess = outputTruncated ? stdout.substring(0, DEFAULT_MAX_OUTPUT_BYTES) : stdout;
+      const outputToProcess = outputTruncated
+        ? stdout.substring(0, DEFAULT_MAX_OUTPUT_BYTES)
+        : stdout;
 
       let matches: CliMatch[] = [];
       try {
         matches = JSON.parse(outputToProcess) as CliMatch[];
-      } catch (_e: unknown) {
+      } catch {
         if (outputTruncated) {
           try {
             const lastValidIndex = outputToProcess.lastIndexOf('}');
@@ -169,7 +171,7 @@ export async function runSg(options: RunOptions): Promise<SgResult> {
                 matches = JSON.parse(truncatedJson) as CliMatch[];
               }
             }
-          } catch (_e: unknown) {
+          } catch {
             resolve({
               matches: [],
               totalMatches: 0,
@@ -193,7 +195,11 @@ export async function runSg(options: RunOptions): Promise<SgResult> {
         matches: finalMatches,
         totalMatches,
         truncated: outputTruncated || matchesTruncated,
-        truncatedReason: outputTruncated ? 'max_output_bytes' : matchesTruncated ? 'max_matches' : undefined,
+        truncatedReason: outputTruncated
+          ? 'max_output_bytes'
+          : matchesTruncated
+            ? 'max_matches'
+            : undefined,
       });
     });
 

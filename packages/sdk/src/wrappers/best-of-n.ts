@@ -1,11 +1,3 @@
-/**
- * @agntk/core - Best-of-N Test-Time Scaling
- *
- * Run an agent N times and pick the best output via LLM judge.
- * Supports parallel/sequential execution, list-wise/pair-wise judging,
- * and budget caps via UsageLimits.
- */
-
 import { createLogger } from '@agntk/logger';
 import type { LanguageModel } from 'ai';
 import type { Agent } from '../types/agent';
@@ -13,66 +5,42 @@ import type { UsageLimits } from '../usage-limits';
 
 const log = createLogger('@agntk/core:best-of-n');
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface BestOfNConfig {
-  /** Number of times to run the agent. */
   n: number;
-  /** Judge model for ranking outputs. */
+
   judgeModel: LanguageModel;
-  /** Judging strategy. 'list-wise' ranks all at once; 'pair-wise' does tournament. Default: 'list-wise'. */
+
   strategy?: 'list-wise' | 'pair-wise';
-  /** Run agent instances in parallel or sequentially. Default: 'parallel'. */
+
   execution?: 'parallel' | 'sequential';
-  /** Criteria for the judge to evaluate outputs against. */
+
   criteria: string;
-  /** Optional budget cap. Stops early if total tokens across all runs exceed this. */
+
   budget?: UsageLimits;
 }
 
 export interface BestOfNCandidate {
-  /** The output text from this run. */
   text: string;
-  /** The score assigned by the judge (higher is better). */
+
   score: number;
-  /** Index of this candidate (0-based). */
+
   index: number;
-  /** Token usage for this run. */
+
   usage?: { inputTokens: number; outputTokens: number; totalTokens: number };
 }
 
 export interface BestOfNResult {
-  /** The winning candidate. */
   best: BestOfNCandidate;
-  /** All candidates with scores. */
+
   candidates: BestOfNCandidate[];
-  /** Total token usage across all agent runs. */
+
   totalUsage: { inputTokens: number; outputTokens: number; totalTokens: number };
-  /** Whether the run was stopped early due to budget. */
+
   budgetExceeded: boolean;
-  /** Number of candidates actually generated (may be < n if budget exceeded). */
+
   runsCompleted: number;
 }
 
-// ============================================================================
-// Core Implementation
-// ============================================================================
-
-/**
- * Run an agent N times and pick the best output via LLM judge.
- *
- * @example
- * ```typescript
- * const result = await withBestOfN(agent, 'Write a haiku about coding', {
- *   n: 3,
- *   judgeModel: myModel,
- *   criteria: 'Quality, creativity, and adherence to haiku format',
- * });
- * console.log(result.best.text); // Best haiku
- * ```
- */
 export async function withBestOfN(
   agent: Agent,
   prompt: string,
@@ -89,7 +57,6 @@ export async function withBestOfN(
 
   log.info('Starting best-of-N', { n, strategy, execution, criteria: criteria.slice(0, 50) });
 
-  // Generate candidates
   const candidates: BestOfNCandidate[] = [];
   const totalUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
   let budgetExceeded = false;
@@ -109,7 +76,6 @@ export async function withBestOfN(
       }
     }
   } else {
-    // Sequential with budget check
     for (let i = 0; i < n; i++) {
       if (budget && isOverBudget(totalUsage, budget)) {
         budgetExceeded = true;
@@ -144,7 +110,6 @@ export async function withBestOfN(
     };
   }
 
-  // Judge candidates
   log.info('Judging candidates', { count: candidates.length, strategy });
 
   let scoredCandidates: BestOfNCandidate[];
@@ -154,7 +119,6 @@ export async function withBestOfN(
     scoredCandidates = await listWiseJudge(candidates, judgeModel, criteria);
   }
 
-  // Sort by score descending
   scoredCandidates.sort((a, b) => b.score - a.score);
 
   const result: BestOfNResult = {
@@ -174,10 +138,6 @@ export async function withBestOfN(
   return result;
 }
 
-// ============================================================================
-// Candidate Generation
-// ============================================================================
-
 async function generateCandidate(
   agent: Agent,
   prompt: string,
@@ -185,9 +145,11 @@ async function generateCandidate(
 ): Promise<BestOfNCandidate | null> {
   try {
     const result = await agent.stream({ prompt });
-    // Consume the stream to get the final text
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    for await (const _chunk of result.fullStream) { /* drain */ }
+    for await (const _chunk of result.fullStream) {
+      void 0;
+    }
     const text = await result.text;
     const usage = await result.usage;
     return {
@@ -208,14 +170,6 @@ async function generateCandidate(
   }
 }
 
-// ============================================================================
-// List-Wise Judge
-// ============================================================================
-
-/**
- * Rank all candidates at once using a single LLM call.
- * Returns candidates with scores assigned.
- */
 async function listWiseJudge(
   candidates: BestOfNCandidate[],
   model: LanguageModel,
@@ -254,7 +208,7 @@ Where SCORE is 1-10 (10 = best). Example for 3 outputs:
     for (const line of lines) {
       const match = line.match(/(\d+)\s*:\s*(\d+)/);
       if (match) {
-        const outputNum = parseInt(match[1], 10) - 1; // 0-indexed
+        const outputNum = parseInt(match[1], 10) - 1;
         const score = parseInt(match[2], 10);
         if (outputNum >= 0 && outputNum < scored.length) {
           scored[outputNum].score = score;
@@ -265,18 +219,11 @@ Where SCORE is 1-10 (10 = best). Example for 3 outputs:
     return scored;
   } catch (error) {
     log.error('List-wise judge failed', { error: String(error) });
-    // Fallback: assign equal scores
+
     return candidates.map((c) => ({ ...c, score: 5 }));
   }
 }
 
-// ============================================================================
-// Pair-Wise Judge
-// ============================================================================
-
-/**
- * Tournament-style judging: compare pairs and accumulate wins as scores.
- */
 async function pairWiseJudge(
   candidates: BestOfNCandidate[],
   model: LanguageModel,
@@ -285,7 +232,6 @@ async function pairWiseJudge(
   const { generateText } = await import('ai');
   const scores = new Array(candidates.length).fill(0);
 
-  // Compare all pairs
   const comparisons: Array<[number, number]> = [];
   for (let i = 0; i < candidates.length; i++) {
     for (let j = i + 1; j < candidates.length; j++) {
@@ -293,7 +239,6 @@ async function pairWiseJudge(
     }
   }
 
-  // Run comparisons in parallel
   await Promise.all(
     comparisons.map(async ([i, j]) => {
       try {
@@ -321,7 +266,7 @@ Which output is better based on the criteria? Respond with EXACTLY one word: "A"
         }
       } catch (error) {
         log.error('Pair-wise comparison failed', { i, j, error: String(error) });
-        // Tie — both get a point
+
         scores[i] += 0.5;
         scores[j] += 0.5;
       }
@@ -330,10 +275,6 @@ Which output is better based on the criteria? Respond with EXACTLY one word: "A"
 
   return candidates.map((c, i) => ({ ...c, score: scores[i] }));
 }
-
-// ============================================================================
-// Budget Check
-// ============================================================================
 
 function isOverBudget(
   usage: { inputTokens: number; outputTokens: number; totalTokens: number },

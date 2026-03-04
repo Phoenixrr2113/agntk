@@ -1,8 +1,3 @@
-/**
- * @fileoverview Integration tests for server + client round-trip.
- * Starts a real HTTP server with a mock agent, verifies client → server → agent flow.
- */
-
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createAgent } from '@agntk/core';
 import { createAgentServer } from '@agntk/server';
@@ -10,7 +5,6 @@ import { AgentHttpClient } from '@agntk/client';
 import { createMockModel } from './setup';
 
 const TEST_PORT = 4567;
-let serverStarted = false;
 
 describe('Server + Client', () => {
   let server: ReturnType<typeof createAgentServer>;
@@ -30,13 +24,12 @@ describe('Server + Client', () => {
     });
 
     server.start();
-    serverStarted = true;
+    void 0;
     client = new AgentHttpClient(`http://localhost:${TEST_PORT}`);
   });
 
   afterAll(() => {
-    // Node.js test runner will clean up the process
-    // Hono serve() doesn't expose a close method directly
+    void 0;
   });
 
   describe('Health endpoint', () => {
@@ -82,7 +75,7 @@ describe('Server + Client', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
+          Accept: 'text/event-stream',
         },
         body: JSON.stringify({ prompt: 'Say hello' }),
       });
@@ -90,7 +83,7 @@ describe('Server + Client', () => {
       expect(response.ok).toBe(true);
 
       const text = await response.text();
-      // SSE format: "event: text-delta\ndata: {...}\n\n"
+
       expect(text).toContain('event: text-delta');
       expect(text).toContain('event: done');
     });

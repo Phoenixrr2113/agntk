@@ -1,13 +1,4 @@
-/**
- * @fileoverview Default configuration values.
- * These are the built-in fallbacks when no config/env is set.
- */
-
 import type { ModelTier, Provider } from './schema';
-
-// ============================================================================
-// Default Models
-// ============================================================================
 
 export const DEFAULT_PROVIDER: Provider = 'openrouter';
 
@@ -44,9 +35,5 @@ export const DEFAULT_MODELS: Record<Provider, Record<ModelTier, string>> = {
   },
 };
 
-// ============================================================================
-// Default Agent Settings
-// ============================================================================
-
-export const DEFAULT_MAX_STEPS = 10;
+export const DEFAULT_MAX_STEPS = 0;
 export const DEFAULT_WORKSPACE_ROOT = process.cwd();

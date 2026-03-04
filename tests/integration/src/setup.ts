@@ -1,15 +1,7 @@
-/**
- * @fileoverview Shared test setup and mock model factories for integration tests.
- * Uses ai/test MockLanguageModelV3 per official AI SDK testing guidance.
- */
-
 import { MockLanguageModelV3, mockValues } from 'ai/test';
 import { simulateReadableStream } from 'ai';
 import type { LanguageModel } from 'ai';
 
-/**
- * Create a mock model that returns a fixed text response.
- */
 export function createMockModel(text: string): LanguageModel {
   return new MockLanguageModelV3({
     doGenerate: async () => ({
@@ -42,10 +34,6 @@ export function createMockModel(text: string): LanguageModel {
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a mock model that cycles through multiple text responses.
- * Each call to generate returns the next text in the array.
- */
 export function createMockMultiModel(texts: string[]): LanguageModel {
   const values = mockValues(
     ...texts.map((text) => ({
@@ -77,7 +65,12 @@ export function createMockMultiModel(texts: string[]): LanguageModel {
               finishReason: { unified: 'stop', raw: undefined },
               logprobs: undefined,
               usage: {
-                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                inputTokens: {
+                  total: 10,
+                  noCache: 10,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
                 outputTokens: { total: 20, text: 20, reasoning: undefined },
               },
             },
@@ -88,9 +81,6 @@ export function createMockMultiModel(texts: string[]): LanguageModel {
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a mock model that streams text chunks.
- */
 export function createMockStreamModel(text: string): LanguageModel {
   return new MockLanguageModelV3({
     doStream: async () => ({
@@ -118,9 +108,6 @@ export function createMockStreamModel(text: string): LanguageModel {
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a mock model that returns tool calls on first request, then text on second.
- */
 export function createMockToolModel(
   toolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }>,
   finalText: string,
@@ -159,7 +146,6 @@ export function createMockToolModel(
     doStream: async () => {
       streamCount++;
       if (streamCount === 1) {
-        // Stream tool calls
         const chunks: Array<Record<string, unknown>> = toolCalls.map((tc) => ({
           type: 'tool-call' as const,
           toolCallId: tc.id,
@@ -177,7 +163,7 @@ export function createMockToolModel(
         });
         return { stream: simulateReadableStream({ chunks }) };
       }
-      // Stream final text
+
       return {
         stream: simulateReadableStream({
           chunks: [
@@ -189,7 +175,12 @@ export function createMockToolModel(
               finishReason: { unified: 'stop', raw: undefined },
               logprobs: undefined,
               usage: {
-                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                inputTokens: {
+                  total: 10,
+                  noCache: 10,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
                 outputTokens: { total: 20, text: 20, reasoning: undefined },
               },
             },
@@ -200,10 +191,6 @@ export function createMockToolModel(
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a mock model that returns tool calls on every request until a counter is exhausted,
- * then returns the final text. Useful for testing multi-step tool loops.
- */
 export function createMockMultiStepToolModel(
   toolCallsPerStep: Array<Array<{ id: string; name: string; args: Record<string, unknown> }>>,
   finalText: string,
@@ -272,7 +259,12 @@ export function createMockMultiStepToolModel(
               finishReason: { unified: 'stop', raw: undefined },
               logprobs: undefined,
               usage: {
-                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                inputTokens: {
+                  total: 10,
+                  noCache: 10,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
                 outputTokens: { total: 20, text: 20, reasoning: undefined },
               },
             },
@@ -283,10 +275,6 @@ export function createMockMultiStepToolModel(
   }) as unknown as LanguageModel;
 }
 
-/**
- * Create a mock model that tracks all prompts it receives.
- * Useful for verifying what was sent to the model.
- */
 export function createMockModelWithSpy(text: string): {
   model: LanguageModel;
   calls: Array<{ prompt: unknown }>;
@@ -318,7 +306,12 @@ export function createMockModelWithSpy(text: string): {
               finishReason: { unified: 'stop', raw: undefined },
               logprobs: undefined,
               usage: {
-                inputTokens: { total: 10, noCache: 10, cacheRead: undefined, cacheWrite: undefined },
+                inputTokens: {
+                  total: 10,
+                  noCache: 10,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
                 outputTokens: { total: 20, text: 20, reasoning: undefined },
               },
             },

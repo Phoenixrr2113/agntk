@@ -11,6 +11,8 @@ import { getVersion } from './version';
 
 export type OutputLevel = 'quiet' | 'normal' | 'verbose';
 
+export type CLICommand = 'list' | 'info' | 'delete' | 'stop' | 'clean';
+
 export interface CLIArgs {
   name: string | null;
   instructions: string | null;
@@ -21,12 +23,15 @@ export interface CLIArgs {
   maxSteps: number;
   help: boolean;
   version: boolean;
-  list: boolean;
+  command: CLICommand | null;
+  commandArg: string | null;
 }
 
 // ============================================================================
 // Arg Parsing
 // ============================================================================
+
+const COMMANDS = new Set<CLICommand>(['list', 'info', 'delete', 'stop', 'clean']);
 
 export function parseCLIArgs(argv: string[]): CLIArgs {
   const args: CLIArgs = {
@@ -36,10 +41,11 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
     interactive: false,
     workspace: process.cwd(),
     outputLevel: 'normal',
-    maxSteps: 25,
+    maxSteps: 0,
     help: false,
     version: false,
-    list: false,
+    command: null,
+    commandArg: null,
   };
 
   const positionals: string[] = [];
@@ -70,7 +76,10 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
         args.outputLevel = 'quiet';
         break;
       case '--max-steps':
-        args.maxSteps = parseInt(argv[++i] ?? '25', 10);
+        {
+          const val = parseInt(argv[++i] ?? '0', 10);
+          args.maxSteps = Number.isNaN(val) || val <= 0 ? 0 : val;
+        }
         break;
       case '-h':
       case '--help':
@@ -80,16 +89,19 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
       case '--version':
         args.version = true;
         break;
-      case 'list':
-        if (positionals.length === 0) {
-          args.list = true;
-        } else {
-          positionals.push(arg);
-        }
-        break;
       default:
         if (!arg.startsWith('-')) {
-          positionals.push(arg);
+          if (positionals.length === 0 && COMMANDS.has(arg as CLICommand)) {
+            args.command = arg as CLICommand;
+            // Grab next arg as the command argument (e.g. agent name)
+            const next = argv[i + 1];
+            if (next && !next.startsWith('-') && !COMMANDS.has(next as CLICommand)) {
+              args.commandArg = next;
+              i++;
+            }
+          } else {
+            positionals.push(arg);
+          }
         }
         break;
     }
@@ -126,7 +138,7 @@ export function printHelp(): void {
     --instructions <text>    What the agent does (injected as system prompt)
     -i, --interactive        Interactive REPL mode
     --workspace <path>       Workspace root (default: cwd)
-    --max-steps <n>          Max tool-loop steps (default: 25)
+    --max-steps <n>          Max tool-loop steps (default: unlimited)
     --verbose                Show full tool args and output
     -q, --quiet              Text output only (for piping)
     -v, --version            Show version
@@ -134,6 +146,10 @@ export function printHelp(): void {
 
   Commands:
     list                     List all known agents
+    info <name>              Show agent details (memory, workspace, tokens)
+    delete <name>            Delete an agent's state
+    stop <name>              Stop a running agent
+    clean                    Interactively remove stale agents
 
   Examples:
     agntk "fix the failing tests"
@@ -142,6 +158,9 @@ export function printHelp(): void {
     agntk -n ops --instructions "you manage k8s deploys" "roll back staging"
     agntk -n coder -i
     agntk list
+    agntk info coder
+    agntk delete old-agent
+    agntk clean
     cat error.log | agntk -n debugger "explain"
 
   Provider (auto-detected):

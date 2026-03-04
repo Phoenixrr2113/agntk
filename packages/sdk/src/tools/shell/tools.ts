@@ -19,7 +19,7 @@ export function createShellTool(workspaceRoot: string) {
         throw new ToolError(
           'Command blocked for safety. This command pattern is potentially destructive.',
           ToolErrorType.COMMAND_BLOCKED,
-          { command: command.slice(0, 100), patterns: 'rm -rf, sudo, shutdown, etc.' }
+          { command: command.slice(0, 100), patterns: 'rm -rf, sudo, shutdown, etc.' },
         );
       }
 
@@ -34,7 +34,6 @@ export function createShellTool(workspaceRoot: string) {
         addToAllowlist(command);
       }
 
-      // S-13: Validate cwd is within workspace root
       let effectiveCwd: string;
       try {
         effectiveCwd = cwd ? validateCwd(cwd, workspaceRoot) : workspaceRoot;
@@ -90,5 +89,4 @@ export function createShellTool(workspaceRoot: string) {
 
 export const shellTool = createShellTool(process.cwd());
 
-// Direct export for testing (bypasses optional `execute` type from AI SDK)
 export const executeShellCommand = shellTool.execute!;

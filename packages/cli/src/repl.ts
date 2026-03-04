@@ -13,11 +13,18 @@ export async function runRepl(args: CLIArgs): Promise<void> {
   const { createAgent } = await import('@agntk/core');
   const colors = createColors(process.stdout.isTTY ?? false);
 
+  let testModel: import('ai').LanguageModel | undefined;
+  if (process.env.AGNTK_TEST_MODE === '1') {
+    const { createTestModel } = await import('./test-model.js');
+    testModel = createTestModel();
+  }
+
   const agent = createAgent({
     name: args.name!,
     instructions: args.instructions ?? undefined,
     workspaceRoot: args.workspace,
-    maxSteps: args.maxSteps,
+    ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
+    ...(testModel ? { model: testModel } : {}),
   });
 
   setupLockCleanup(args.name!);
@@ -26,9 +33,10 @@ export async function runRepl(args: CLIArgs): Promise<void> {
   const output = process.stdout;
   const toolCount = agent.getToolNames().length;
 
+  const modelLabel = agent.getModelId();
   output.write(`\n${colors.bold('⚡ agntk')} ${colors.dim(`(${version})`)}\n`);
   output.write(
-    `${colors.cyan(colors.bold(args.name!))} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.green('memory: on')}\n`,
+    `${colors.cyan(colors.bold(args.name!))} ${colors.dim('|')} ${colors.dim(modelLabel)} ${colors.dim('|')} ${colors.dim(`${toolCount} tools`)} ${colors.dim('|')} ${colors.green('memory: on')}\n`,
   );
   output.write(`${colors.dim('Type /help for commands, /exit or Ctrl+C to quit.')}\n\n`);
 
@@ -103,7 +111,7 @@ export async function runRepl(args: CLIArgs): Promise<void> {
         status: process.stderr,
         level: args.outputLevel,
         colors,
-        maxSteps: args.maxSteps,
+        ...(args.maxSteps > 0 ? { maxSteps: args.maxSteps } : {}),
         isTTY: process.stderr.isTTY ?? false,
       });
 

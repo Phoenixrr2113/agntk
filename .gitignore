@@ -42,3 +42,5 @@ apps/site/.vercel
 UNIFIED-AGENT-DESIGN.md
 CODEBASE-REVIEW.md
 .vercel/
+packages/_archive/
+workspace/

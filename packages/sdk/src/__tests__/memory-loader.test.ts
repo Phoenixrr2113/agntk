@@ -1,18 +1,4 @@
-/**
- * @fileoverview Tests for memory loader (loadMemoryContext).
- *
- * Validates:
- * - Correct load order and section formatting
- * - Missing files are silently skipped
- * - Empty result when no files exist
- * - Large memory warning (via logger mock)
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ============================================================================
-// Mocks
-// ============================================================================
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@agntk/logger', () => ({
   createLogger: () => ({
@@ -27,29 +13,29 @@ vi.mock('@agntk/logger', () => ({
 import { loadMemoryContext } from '../memory/loader';
 import type { MemoryStore } from '../memory/types';
 
-// ============================================================================
-// Mock Store Factory
-// ============================================================================
-
 function createMockStore(overrides: Partial<MemoryStore> = {}): MemoryStore {
   return {
     loadIdentity: vi.fn().mockResolvedValue(null),
     loadPreferences: vi.fn().mockResolvedValue(null),
     loadProject: vi.fn().mockResolvedValue(null),
-    loadMemory: vi.fn().mockResolvedValue(null),
     loadContext: vi.fn().mockResolvedValue(null),
     loadDecisions: vi.fn().mockResolvedValue(null),
     saveContext: vi.fn().mockResolvedValue(undefined),
-    saveMemory: vi.fn().mockResolvedValue(undefined),
     savePreferences: vi.fn().mockResolvedValue(undefined),
     appendDecision: vi.fn().mockResolvedValue(undefined),
+    listMemoryFiles: vi.fn().mockResolvedValue([]),
+    createTaskFolder: vi.fn().mockResolvedValue('/tmp/task'),
+    archiveTask: vi.fn().mockResolvedValue(undefined),
+    getCurrentTaskPath: vi.fn().mockResolvedValue(null),
+    getProjectPath: vi.fn().mockReturnValue('/tmp/.agntk'),
+    getGlobalPath: vi.fn().mockReturnValue('/home/.agntk'),
+    getMemoryPath: vi.fn().mockReturnValue('/tmp/.agntk/memory'),
+    getWorkspacePath: vi.fn().mockReturnValue('/tmp/.agntk/workspace'),
+    getArchivePath: vi.fn().mockReturnValue('/tmp/.agntk/archive'),
+    ensureDirectories: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
-
-// ============================================================================
-// Tests
-// ============================================================================
 
 describe('loadMemoryContext', () => {
   describe('empty state', () => {
@@ -89,15 +75,6 @@ describe('loadMemoryContext', () => {
       expect(result).toContain('A TypeScript project');
     });
 
-    it('loads memory as Memory section', async () => {
-      const store = createMockStore({
-        loadMemory: vi.fn().mockResolvedValue('- TypeScript is typed\n- ESM is the future'),
-      });
-      const result = await loadMemoryContext(store);
-      expect(result).toContain('## Memory');
-      expect(result).toContain('- TypeScript is typed');
-    });
-
     it('loads context as Current Context section', async () => {
       const store = createMockStore({
         loadContext: vi.fn().mockResolvedValue('Working on Phase 2 memory system'),
@@ -108,13 +85,37 @@ describe('loadMemoryContext', () => {
     });
   });
 
+  describe('memory file listing', () => {
+    it('lists memory files when present', async () => {
+      const store = createMockStore({
+        listMemoryFiles: vi
+          .fn()
+          .mockResolvedValue(['api-design.md', 'decisions.md', 'project-setup.md']),
+      });
+      const result = await loadMemoryContext(store);
+      expect(result).toContain('## Memory Files');
+      expect(result).toContain('- api-design.md');
+      expect(result).toContain('- decisions.md');
+      expect(result).toContain('- project-setup.md');
+    });
+
+    it('does not include memory files section when empty', async () => {
+      const store = createMockStore({
+        listMemoryFiles: vi.fn().mockResolvedValue([]),
+        loadProject: vi.fn().mockResolvedValue('project content'),
+      });
+      const result = await loadMemoryContext(store);
+      expect(result).not.toContain('## Memory Files');
+    });
+  });
+
   describe('load order', () => {
-    it('sections appear in correct order: Identity, Preferences, Project, Memory, Context', async () => {
+    it('sections appear in correct order: Identity, Preferences, Project, Memory Files, Context', async () => {
       const store = createMockStore({
         loadIdentity: vi.fn().mockResolvedValue('identity-content'),
         loadPreferences: vi.fn().mockResolvedValue('preferences-content'),
         loadProject: vi.fn().mockResolvedValue('project-content'),
-        loadMemory: vi.fn().mockResolvedValue('memory-content'),
+        listMemoryFiles: vi.fn().mockResolvedValue(['notes.md']),
         loadContext: vi.fn().mockResolvedValue('context-content'),
       });
 
@@ -123,7 +124,7 @@ describe('loadMemoryContext', () => {
       const identityIdx = result.indexOf('## Identity');
       const preferencesIdx = result.indexOf('## Preferences');
       const projectIdx = result.indexOf('## Project');
-      const memoryIdx = result.indexOf('## Memory');
+      const memoryIdx = result.indexOf('## Memory Files');
       const contextIdx = result.indexOf('## Current Context');
 
       expect(identityIdx).toBeLessThan(preferencesIdx);
@@ -138,13 +139,13 @@ describe('loadMemoryContext', () => {
       const store = createMockStore({
         loadIdentity: vi.fn().mockResolvedValue(null),
         loadProject: vi.fn().mockResolvedValue('project content'),
-        loadMemory: vi.fn().mockResolvedValue(null),
+        listMemoryFiles: vi.fn().mockResolvedValue([]),
       });
 
       const result = await loadMemoryContext(store);
       expect(result).toContain('## Project');
       expect(result).not.toContain('## Identity');
-      expect(result).not.toContain('## Memory');
+      expect(result).not.toContain('## Memory Files');
     });
   });
 

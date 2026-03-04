@@ -1,8 +1,3 @@
-/**
- * @fileoverview Integration tests for guardrails: contentFilter, topicFilter, lengthLimit, runGuardrails, wrapWithGuardrails.
- * Tests the actual guardrail implementations without mocking.
- */
-
 import { describe, it, expect } from 'vitest';
 import {
   contentFilter,
@@ -72,10 +67,7 @@ describe('Guardrails', () => {
 
   describe('runGuardrails', () => {
     it('should run all guardrails sequentially and collect results', async () => {
-      const guards = [
-        contentFilter(),
-        lengthLimit({ maxChars: 10 }),
-      ];
+      const guards = [contentFilter(), lengthLimit({ maxChars: 10 })];
 
       const { results } = await runGuardrails(guards, 'This message is too long and clean', {
         prompt: 'test',
@@ -83,7 +75,7 @@ describe('Guardrails', () => {
       });
 
       expect(results).toHaveLength(2);
-      // contentFilter should pass (no PII), lengthLimit should fail
+
       const contentResult = results.find((r) => r.name === 'contentFilter');
       const lengthResult = results.find((r) => r.name === 'lengthLimit');
       expect(contentResult?.passed).toBe(true);

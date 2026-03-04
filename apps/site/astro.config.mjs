@@ -1,6 +1,17 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import vercel from '@astrojs/vercel';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { realpathSync } from 'node:fs';
+
+// Resolve the zod version that Astro depends on (^3.25.76) rather than the
+// zod@4.x hoisted to the monorepo root by shamefully-hoist=true.
+// Astro's content collection schemas are incompatible with Zod v4 internals.
+const require_ = createRequire(import.meta.url);
+const astroEntry = require_.resolve('astro');
+const astroNodeModules = path.resolve(astroEntry, '..', '..', '..');
+const zodForAstro = realpathSync(path.join(astroNodeModules, 'zod'));
 
 export default defineConfig({
   adapter: vercel({
@@ -9,6 +20,11 @@ export default defineConfig({
   // Bundle Upstash deps into the serverless function
   // (pnpm symlinks break in Vercel's deployed node_modules)
   vite: {
+    resolve: {
+      alias: {
+        zod: zodForAstro,
+      },
+    },
     ssr: {
       noExternal: ['@upstash/redis', '@upstash/ratelimit'],
     },

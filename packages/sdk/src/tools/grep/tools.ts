@@ -9,7 +9,6 @@ import { success, error } from '../utils/tool-result';
 
 const log = createLogger('@agntk/core:grep');
 
-// Get config values with fallbacks
 function getGrepConfig() {
   const config = getToolConfig<{
     timeout?: number;
@@ -23,26 +22,17 @@ function getGrepConfig() {
 
 const grepInputSchema = z.object({
   pattern: z.string().describe('Regex pattern to search for in file contents'),
-  include: z
-    .string()
-    .optional()
-    .describe('File pattern to include (e.g., "*.ts", "*.{js,jsx}")'),
+  include: z.string().optional().describe('File pattern to include (e.g., "*.ts", "*.{js,jsx}")'),
   path: z
     .string()
     .optional()
     .describe('Directory to search in. Defaults to current working directory.'),
-  context: z
-    .number()
-    .optional()
-    .describe('Number of context lines to show around matches'),
+  context: z.number().optional().describe('Number of context lines to show around matches'),
   caseSensitive: z
     .boolean()
     .optional()
     .describe('Enable case-sensitive matching (default: smart case)'),
-  wholeWord: z
-    .boolean()
-    .optional()
-    .describe('Match whole words only'),
+  wholeWord: z.boolean().optional().describe('Match whole words only'),
 });
 
 export const grepTool = tool({
@@ -73,7 +63,11 @@ export const grepTool = tool({
       }
 
       const output = formatGrepResult(result);
-      log.info('grep complete', { pattern: args.pattern, matches: result.totalMatches, files: result.filesSearched });
+      log.info('grep complete', {
+        pattern: args.pattern,
+        matches: result.totalMatches,
+        files: result.filesSearched,
+      });
 
       return success({
         output,

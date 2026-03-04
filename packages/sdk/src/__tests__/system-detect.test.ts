@@ -1,7 +1,3 @@
-/**
- * @fileoverview Tests for system detection and Ollama model recommendation.
- */
-
 import { describe, it, expect } from 'vitest';
 import {
   isCloudModel,
@@ -9,10 +5,6 @@ import {
   recommendOllamaModels,
   type SystemProfile,
 } from '../system-detect';
-
-// ============================================================================
-// isCloudModel
-// ============================================================================
 
 describe('isCloudModel', () => {
   it('detects -cloud suffix', () => {
@@ -35,10 +27,6 @@ describe('isCloudModel', () => {
     expect(isCloudModel('Qwen3.5:Cloud')).toBe(true);
   });
 });
-
-// ============================================================================
-// isUsableSize
-// ============================================================================
 
 describe('isUsableSize', () => {
   it('accepts cloud models regardless of size label', () => {
@@ -66,11 +54,6 @@ describe('isUsableSize', () => {
   });
 });
 
-// ============================================================================
-// recommendOllamaModels
-// ============================================================================
-
-/** Helper to create a fake system profile */
 function fakeProfile(totalRAMGb: number, usableForModelsGb: number): SystemProfile {
   return {
     totalRAMGb,
@@ -122,17 +105,18 @@ describe('recommendOllamaModels', () => {
     });
 
     it('picks cloud model as best available', () => {
-      const rec = recommendOllamaModels(fakeProfile(8, 5), ['qwen3:0.6b', 'qwen3-coder:480b-cloud']);
+      const rec = recommendOllamaModels(fakeProfile(8, 5), [
+        'qwen3:0.6b',
+        'qwen3-coder:480b-cloud',
+      ]);
       expect(rec.noUsableModels).toBeUndefined();
       expect(rec.standard).toBe('qwen3-coder:480b-cloud');
     });
 
     it('clamps ideal to installed models', () => {
-      // Large tier ideals are qwen3-coder:30b and qwen3.5:35b,
-      // but only qwen3:14b is installed
       const rec = recommendOllamaModels(fakeProfile(64, 40), ['qwen3:14b']);
       expect(rec.tier).toBe('large');
-      // Since ideal models aren't installed, falls back to best available
+
       expect(rec.standard).toBe('qwen3:14b');
       expect(rec.powerful).toBe('qwen3:14b');
     });
@@ -146,7 +130,7 @@ describe('recommendOllamaModels', () => {
 
     it('prefers cloud over local for all tiers', () => {
       const rec = recommendOllamaModels(fakeProfile(24, 15), ['qwen3:8b', 'gpt-oss:120b-cloud']);
-      // Cloud model wins for every tier — runs on remote infra, always better
+
       expect(rec.fast).toBe('gpt-oss:120b-cloud');
       expect(rec.standard).toBe('gpt-oss:120b-cloud');
       expect(rec.reasoning).toBe('gpt-oss:120b-cloud');

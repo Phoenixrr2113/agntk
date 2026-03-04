@@ -1,8 +1,3 @@
-/**
- * @fileoverview Browser tool implementation.
- * Wraps the agent-browser CLI to provide web browsing capabilities.
- */
-
 import { tool } from 'ai';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -12,19 +7,15 @@ import { join } from 'node:path';
 import { browserInputSchema, BROWSER_TOOL_DESCRIPTION } from './types';
 import type { BrowserInput, BrowserConfig } from './types';
 import { success, error } from '../utils/tool-result';
-import { BROWSER_DEFAULT_TIMEOUT, BROWSER_MAX_OUTPUT_LENGTH, BROWSER_MAX_BUFFER } from '../../constants';
+import {
+  BROWSER_DEFAULT_TIMEOUT,
+  BROWSER_MAX_OUTPUT_LENGTH,
+  BROWSER_MAX_BUFFER,
+} from '../../constants';
 
 const execFileAsync = promisify(execFile);
 
-// ============================================================================
-// Constants
-// ============================================================================
-
 const CLI_BINARY = 'agent-browser';
-
-// ============================================================================
-// CLI Availability Check
-// ============================================================================
 
 let cliAvailable: boolean | null = null;
 
@@ -34,25 +25,19 @@ export async function isBrowserCliAvailable(): Promise<boolean> {
   try {
     await execFileAsync('which', [CLI_BINARY]);
     cliAvailable = true;
-  } catch (_e: unknown) {
+  } catch {
     cliAvailable = false;
   }
   return cliAvailable;
 }
 
-/** Reset cached availability (for testing). */
 export function resetCliAvailability(): void {
   cliAvailable = null;
 }
 
-// ============================================================================
-// Command Builder
-// ============================================================================
-
 export function buildCommand(input: BrowserInput, config: BrowserConfig = {}): string[] {
   const args: string[] = [];
 
-  // Global flags
   if (config.session) {
     args.push('--session', config.session);
   }
@@ -161,10 +146,6 @@ export function buildCommand(input: BrowserInput, config: BrowserConfig = {}): s
   return args;
 }
 
-// ============================================================================
-// CLI Executor
-// ============================================================================
-
 export async function executeBrowserCommand(
   args: string[],
   timeout: number = BROWSER_DEFAULT_TIMEOUT,
@@ -185,7 +166,12 @@ export async function executeBrowserCommand(
     };
   } catch (err: unknown) {
     const durationMs = Math.round(performance.now() - start);
-    const execError = err as { stdout?: string; stderr?: string; code?: number | string; killed?: boolean };
+    const execError = err as {
+      stdout?: string;
+      stderr?: string;
+      code?: number | string;
+      killed?: boolean;
+    };
 
     if (execError.killed) {
       return {
@@ -204,10 +190,6 @@ export async function executeBrowserCommand(
     };
   }
 }
-
-// ============================================================================
-// Tool Factory
-// ============================================================================
 
 export function createBrowserTool(config: BrowserConfig = {}) {
   const timeout = config.timeout ?? BROWSER_DEFAULT_TIMEOUT;
@@ -246,9 +228,5 @@ export function createBrowserTool(config: BrowserConfig = {}) {
     },
   });
 }
-
-// ============================================================================
-// Default Instance
-// ============================================================================
 
 export const browserTool = createBrowserTool();

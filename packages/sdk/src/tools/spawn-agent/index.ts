@@ -1,246 +1,420 @@
 /**
- * @agntk/core - Spawn Agent Tool
- * Tool for spawning sub-agents with streaming output
+ * @fileoverview Sub-agent spawning and lifecycle management.
+ * Handles creating, executing, and summarizing tasks delegted to sub-agents.
+ * Supports both synchronous (blocking) and asynchronous (background) execution.
  */
 
 import { generateId, generateText } from 'ai';
 import { z } from 'zod';
+import { createLogger } from '@agntk/logger';
 
-import { getSubAgentConfig, subAgentRoles } from '../../presets/sub-agent-configs';
 import { resolveModel } from '../../models';
+import type { AgentRegistry, AgentRegistryEntry, SpawnErrorType } from './registry';
+
+const log = createLogger('@agntk/core:spawn-agent');
 
 export interface SpawnAgentOptions {
-  /**
-   * Maximum spawn depth to prevent infinite recursion
-   * Sub-agents spawned by this tool will have depth-1
-   */
   maxSpawnDepth?: number;
 
-  /**
-   * Current spawn depth (0 = main agent)
-   */
   currentDepth?: number;
 
-  /**
-   * Agent factory function - must be provided to enable spawning.
-   * This is called to create the sub-agent instance.
-   */
   createAgent?: (options: {
-    role: string;
-    instructions?: string;
+    task: string;
+    instructions: string;
+    workspacePath: string;
+    model?: 'fast' | 'standard' | 'reasoning';
+    tools?: string[];
   }) => {
     stream: (input: { prompt: string }) => {
       fullStream: AsyncIterable<{ type: string; text?: string }>;
       text: Promise<string>;
+      usage: Promise<{ totalTokens?: number; promptTokens?: number; completionTokens?: number }>;
     };
   };
 
-  /**
-   * Optional callback for streaming sub-agent output
-   * Called with each text delta chunk
-   */
+  registry?: AgentRegistry;
+
+  workspacePath?: string;
+
   onStream?: (data: SubAgentStreamData) => void;
 }
 
 export interface SubAgentStreamData {
   type: 'sub-agent-stream';
   agentId: string;
-  role: string;
   text: string;
   status: 'streaming' | 'complete';
 }
 
-const DESCRIPTION = `Spawn a sub-agent for a specific task.
+const DESCRIPTION = `Spawn a sub-agent to work on a specific task.
 
-Use this tool when you need to delegate complex work that requires:
-- Independent reasoning and decision-making
-- Specialized role focus (coder, researcher, analyst)
-- Autonomous task completion
+Use this tool to delegate work that benefits from:
+- Independent, focused execution
+- Parallel processing (use async: true)
+- Isolated workspace for intermediate results
 
-The sub-agent will work independently and stream its output. You will receive a summary of the results.
+The sub-agent works autonomously and writes its output to a workspace directory.
+You receive a summary and can read the full output from the workspace path.
 
-Roles:
-- coder: Code implementation specialist - best for writing, refactoring, debugging code
-- researcher: Research specialist - best for gathering and synthesizing information
-- analyst: Analysis specialist - best for data analysis and insights
-- generic: General-purpose (default)
+Parameters:
+- task (required): Clear description of what the sub-agent should accomplish
+- context: Background information the sub-agent needs
+- async: Set to true to run in background (use check_agent to poll)
+- model: Override model tier ('fast', 'standard', 'reasoning')
 
-Note: Sub-agents cannot spawn their own sub-agents (prevents infinite recursion).`;
+When async is false (default), this tool blocks until the sub-agent completes.
+When async is true, it returns immediately with an agentId for polling.`;
 
 export const spawnAgentParametersSchema = z.object({
-  task: z.string().describe('The task for the sub-agent to accomplish'),
-  role: z.enum(subAgentRoles).default('generic').describe('The specialized role for the sub-agent'),
-  context: z.string().optional().describe('Additional context to provide to the sub-agent'),
+  task: z.string().describe('Clear description of what the sub-agent should accomplish'),
+  context: z.string().optional().describe('Background information the sub-agent needs'),
+  async: z
+    .boolean()
+    .default(false)
+    .describe('If true, run in background and return immediately with agentId'),
+  model: z
+    .enum(['fast', 'standard', 'reasoning'])
+    .optional()
+    .describe('Model tier override (default: inherit parent)'),
 });
 
 export type SpawnAgentInput = z.infer<typeof spawnAgentParametersSchema>;
 
-export interface SpawnAgentResult {
+export interface SpawnAgentSyncResult {
   success: boolean;
-  agentId?: string;
-  role?: string;
+  agentId: string;
   summary?: string;
-  message?: string;
+  workspacePath: string;
   error?: string;
-  suggestion?: string;
+  errorType?: SpawnErrorType;
+  message?: string;
 }
 
-/**
- * Execute function for spawn agent tool
- */
+export interface SpawnAgentAsyncResult {
+  success: true;
+  agentId: string;
+  workspacePath: string;
+  status: 'running';
+  message: string;
+}
+
+export type SpawnAgentResult = SpawnAgentSyncResult | SpawnAgentAsyncResult;
+
+export function generateAgentId(task: string): string {
+  const slug = task
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join('-');
+
+  const suffix = generateId().slice(0, 4);
+  return `${slug || 'agent'}-${suffix}`;
+}
+
 async function executeSpawnAgent(
   input: SpawnAgentInput,
-  options: SpawnAgentOptions
+  options: SpawnAgentOptions,
 ): Promise<SpawnAgentResult> {
   const {
-    maxSpawnDepth = 1,
+    maxSpawnDepth = 2,
     currentDepth = 0,
     createAgent,
+    registry,
+    workspacePath,
     onStream,
   } = options;
 
-  const { task, role, context } = input;
+  const { task, context, model: modelTier } = input;
+  const isAsync = input.async;
 
-  // Prevent spawning if at max depth or no factory
   if (currentDepth >= maxSpawnDepth) {
     return {
       success: false,
+      agentId: '',
+      workspacePath: '',
       error: 'Maximum spawn depth reached. Sub-agents cannot spawn further sub-agents.',
-      suggestion: 'Complete this task directly instead of delegating.',
+      errorType: 'depth_exceeded' as SpawnErrorType,
+      message: 'Complete this task directly instead of delegating.',
     };
   }
 
   if (!createAgent) {
     return {
       success: false,
+      agentId: '',
+      workspacePath: '',
       error: 'Agent factory not configured. Sub-agent spawning is disabled.',
     };
   }
 
-  const agentId = generateId();
-  const roleConfig = getSubAgentConfig(role);
+  const agentId = generateAgentId(task);
+  const agentWorkspacePath = workspacePath ? `${workspacePath}/${agentId}` : agentId;
 
-  // Build the sub-agent prompt
-  const fullPrompt = context 
-    ? `Context:\n${context}\n\nTask:\n${task}`
-    : task;
+  log.info('Spawning sub-agent', { agentId, task: task.slice(0, 80), async: isAsync });
 
-  // Stream start event
-  if (onStream) {
-    onStream({
-      type: 'sub-agent-stream',
-      agentId,
-      role,
-      text: '',
-      status: 'streaming',
-    });
+  const registryEntry: AgentRegistryEntry = {
+    agentId,
+    task,
+    status: 'running',
+    workspacePath: agentWorkspacePath,
+    startedAt: new Date().toISOString(),
+  };
+
+  if (registry) {
+    await registry.register(registryEntry);
   }
 
-  try {
-    // Create and run the sub-agent
-    const subAgent = createAgent({
-      role,
-      instructions: roleConfig.instructions,
-    });
+  const instructions = buildSubAgentInstructions(task, agentWorkspacePath);
 
-    const stream = subAgent.stream({ prompt: fullPrompt });
+  const fullPrompt = context ? `Context:\n${context}\n\nTask:\n${task}` : task;
 
-    // Stream sub-agent output
-    for await (const chunk of stream.fullStream) {
-      if (chunk.type === 'text-delta' && chunk.text) {
-        if (onStream) {
-          onStream({
-            type: 'sub-agent-stream',
-            agentId,
-            role,
-            text: chunk.text,
-            status: 'streaming',
-          });
-        }
-      }
-    }
+  const subAgent = createAgent({
+    task,
+    instructions,
+    workspacePath: agentWorkspacePath,
+    model: modelTier,
+  });
 
-    // Get final result
-    const result = await stream.text;
-
-    // Stream completion event
-    if (onStream) {
-      onStream({
-        type: 'sub-agent-stream',
+  if (isAsync) {
+    runSubAgentInBackground(
+      subAgent,
+      fullPrompt,
+      agentId,
+      task,
+      agentWorkspacePath,
+      registry ?? null,
+      onStream ?? null,
+    ).catch((err) => {
+      log.error('Background sub-agent failed', {
         agentId,
-        role,
-        text: result,
-        status: 'complete',
+        error: err instanceof Error ? err.message : String(err),
       });
-    }
-
-    // Extract semantic summary using LLM instead of blind truncation
-    const summary = await extractSummary(result, role, task);
+    });
 
     return {
       success: true,
       agentId,
-      role,
+      workspacePath: agentWorkspacePath,
+      status: 'running',
+      message: `Sub-agent "${agentId}" started in background. Use check_agent to poll status.`,
+    };
+  }
+
+  return runSubAgentSync(
+    subAgent,
+    fullPrompt,
+    agentId,
+    task,
+    agentWorkspacePath,
+    registry ?? null,
+    onStream ?? null,
+  );
+}
+
+async function runSubAgentSync(
+  subAgent: ReturnType<NonNullable<SpawnAgentOptions['createAgent']>>,
+  prompt: string,
+  agentId: string,
+  task: string,
+  agentWorkspacePath: string,
+  registry: AgentRegistry | null,
+  onStream: ((data: SubAgentStreamData) => void) | null,
+): Promise<SpawnAgentSyncResult> {
+  if (onStream) {
+    onStream({ type: 'sub-agent-stream', agentId, text: '', status: 'streaming' });
+  }
+
+  try {
+    const stream = subAgent.stream({ prompt });
+
+    for await (const chunk of stream.fullStream) {
+      if (chunk.type === 'text-delta' && chunk.text) {
+        if (onStream) {
+          onStream({ type: 'sub-agent-stream', agentId, text: chunk.text, status: 'streaming' });
+        }
+      }
+    }
+
+    const result = await stream.text;
+
+    if (onStream) {
+      onStream({ type: 'sub-agent-stream', agentId, text: result, status: 'complete' });
+    }
+
+    const summary = await extractSummary(result, task);
+
+    if (registry) {
+      await registry.update(agentId, {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        summary,
+      });
+    }
+
+    return {
+      success: true,
+      agentId,
       summary,
-      message: `Sub-agent (${role}) completed the task.`,
+      workspacePath: agentWorkspacePath,
+      message: `Sub-agent "${agentId}" completed the task. Full output at ${agentWorkspacePath}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorType = classifyError(error);
 
-    // Stream error event
     if (onStream) {
       onStream({
         type: 'sub-agent-stream',
         agentId,
-        role,
         text: `Error: ${errorMessage}`,
         status: 'complete',
+      });
+    }
+
+    if (registry) {
+      await registry.update(agentId, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+        error: errorMessage,
+        errorType,
       });
     }
 
     return {
       success: false,
       agentId,
-      role,
+      workspacePath: agentWorkspacePath,
       error: errorMessage,
+      errorType,
     };
   }
 }
 
-/**
- * Extract a semantic summary from sub-agent output using a fast model.
- * Falls back to first 500 chars if the summarization call fails.
- */
-async function extractSummary(
-  fullOutput: string,
-  role: string,
-  originalTask: string,
-): Promise<string> {
-  // Short outputs don't need summarization
+async function runSubAgentInBackground(
+  subAgent: ReturnType<NonNullable<SpawnAgentOptions['createAgent']>>,
+  prompt: string,
+  agentId: string,
+  task: string,
+  agentWorkspacePath: string,
+  registry: AgentRegistry | null,
+  onStream: ((data: SubAgentStreamData) => void) | null,
+): Promise<void> {
+  try {
+    const stream = subAgent.stream({ prompt });
+
+    for await (const chunk of stream.fullStream) {
+      if (chunk.type === 'text-delta' && chunk.text && onStream) {
+        onStream({ type: 'sub-agent-stream', agentId, text: chunk.text, status: 'streaming' });
+      }
+    }
+
+    const result = await stream.text;
+
+    if (onStream) {
+      onStream({ type: 'sub-agent-stream', agentId, text: result, status: 'complete' });
+    }
+
+    const summary = await extractSummary(result, task);
+
+    if (registry) {
+      await registry.update(agentId, {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        summary,
+      });
+    }
+
+    log.info('Background sub-agent completed', { agentId });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorType = classifyError(error);
+
+    if (onStream) {
+      onStream({
+        type: 'sub-agent-stream',
+        agentId,
+        text: `Error: ${errorMessage}`,
+        status: 'complete',
+      });
+    }
+
+    if (registry) {
+      await registry.update(agentId, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+        error: errorMessage,
+        errorType,
+      });
+    }
+
+    log.error('Background sub-agent failed', { agentId, error: errorMessage, errorType });
+  }
+}
+
+function buildSubAgentInstructions(task: string, workspacePath: string): string {
+  return `You are a sub-agent working on a specific task. Focus exclusively on this task and produce thorough results.
+
+Your workspace directory is: ${workspacePath}
+Write your output, notes, and intermediate results to this directory.
+
+When you finish:
+1. Write a clear summary of what you accomplished
+2. Note any issues encountered or decisions made
+3. Save detailed results to your workspace directory
+
+Task: ${task}`;
+}
+
+async function extractSummary(fullOutput: string, originalTask: string): Promise<string> {
   if (fullOutput.length <= 500) {
     return fullOutput;
   }
 
   try {
     const { text } = await generateText({
-      model: resolveModel({ tier: 'fast' }),
-      system: `You are summarizing the output of a sub-agent (role: ${role}). Write a clear, actionable summary that captures the key findings, decisions, and results. Be concise but preserve critical details.`,
+      model: resolveModel({ tier: 'fast' }).model,
+      system: `You are summarizing the output of a sub-agent. Write a clear, actionable summary that captures key findings, decisions, and results. Be concise but preserve critical details.`,
       prompt: `Original task: ${originalTask}\n\nSub-agent output:\n${fullOutput}`,
       maxRetries: 1,
     });
     return text;
-  } catch (_e: unknown) {
-    // Fallback: return the beginning of the output if summarization fails
+  } catch {
     return `${fullOutput.slice(0, 500)}...\n[Summary extraction failed, showing first 500 chars]`;
   }
 }
 
-/**
- * Creates a spawn agent tool definition for use with AI SDK
- *
- * @param options - Spawn options including depth limits, agent factory, and stream callback
- * @returns Tool definition object compatible with AI SDK
- */
+function classifyError(error: unknown): SpawnErrorType {
+  if (!(error instanceof Error)) return 'task_failed';
+
+  const msg = error.message.toLowerCase();
+
+  if (msg.includes('timeout') || msg.includes('step limit') || msg.includes('max steps')) {
+    return 'timeout';
+  }
+
+  if (
+    msg.includes('rate limit') ||
+    msg.includes('401') ||
+    msg.includes('403') ||
+    msg.includes('429') ||
+    msg.includes('api') ||
+    msg.includes('network') ||
+    msg.includes('fetch failed') ||
+    msg.includes('econnrefused')
+  ) {
+    return 'api_error';
+  }
+
+  if (msg.includes('depth') || msg.includes('recursion')) {
+    return 'depth_exceeded';
+  }
+
+  return 'task_failed';
+}
+
 export function createSpawnAgentTool(options: SpawnAgentOptions = {}) {
   return {
     description: DESCRIPTION,

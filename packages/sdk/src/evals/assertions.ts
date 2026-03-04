@@ -1,25 +1,12 @@
-/**
- * @agntk/core - Eval Assertions Library
- *
- * Built-in assertions for agent eval suites.
- */
-
 import type { LanguageModel } from 'ai';
-import type { Assertion, AssertionResult, EvalAgentResult } from './types';
+import type { Assertion, EvalAgentResult } from './types';
 
-// ============================================================================
-// Tool Assertions
-// ============================================================================
-
-/**
- * Assert that a specific tool was called at least once.
- */
 export function toolCalled(toolName: string): Assertion {
   return {
     name: `toolCalled(${toolName})`,
     check: (result) => {
-      const called = result.steps.some(
-        (step) => step.toolCalls?.some((tc) => tc.toolName === toolName),
+      const called = result.steps.some((step) =>
+        step.toolCalls?.some((tc) => tc.toolName === toolName),
       );
       return {
         name: `toolCalled(${toolName})`,
@@ -30,15 +17,12 @@ export function toolCalled(toolName: string): Assertion {
   };
 }
 
-/**
- * Assert that a specific tool was NOT called.
- */
 export function noToolCalled(toolName: string): Assertion {
   return {
     name: `noToolCalled(${toolName})`,
     check: (result) => {
-      const called = result.steps.some(
-        (step) => step.toolCalls?.some((tc) => tc.toolName === toolName),
+      const called = result.steps.some((step) =>
+        step.toolCalls?.some((tc) => tc.toolName === toolName),
       );
       return {
         name: `noToolCalled(${toolName})`,
@@ -49,9 +33,6 @@ export function noToolCalled(toolName: string): Assertion {
   };
 }
 
-/**
- * Assert that a tool was called a specific number of times.
- */
 export function toolCalledTimes(toolName: string, expectedCount: number): Assertion {
   return {
     name: `toolCalledTimes(${toolName}, ${expectedCount})`,
@@ -65,19 +46,13 @@ export function toolCalledTimes(toolName: string, expectedCount: number): Assert
       return {
         name: `toolCalledTimes(${toolName}, ${expectedCount})`,
         passed: count === expectedCount,
-        message: count !== expectedCount ? `Expected ${expectedCount} calls, got ${count}` : undefined,
+        message:
+          count !== expectedCount ? `Expected ${expectedCount} calls, got ${count}` : undefined,
       };
     },
   };
 }
 
-// ============================================================================
-// Output Assertions
-// ============================================================================
-
-/**
- * Assert that the output matches a regex pattern.
- */
 export function outputMatches(pattern: RegExp): Assertion {
   return {
     name: `outputMatches(${pattern})`,
@@ -92,9 +67,6 @@ export function outputMatches(pattern: RegExp): Assertion {
   };
 }
 
-/**
- * Assert that the output contains a specific string.
- */
 export function outputContains(text: string): Assertion {
   return {
     name: `outputContains("${text.slice(0, 30)}")`,
@@ -109,13 +81,6 @@ export function outputContains(text: string): Assertion {
   };
 }
 
-// ============================================================================
-// Step / Usage Assertions
-// ============================================================================
-
-/**
- * Assert the number of steps is within a range.
- */
 export function stepCount(min: number, max?: number): Assertion {
   const desc = max !== undefined ? `stepCount(${min}-${max})` : `stepCount(>=${min})`;
   return {
@@ -132,9 +97,6 @@ export function stepCount(min: number, max?: number): Assertion {
   };
 }
 
-/**
- * Assert total token usage is within a budget.
- */
 export function tokenUsage(maxTokens: number): Assertion {
   return {
     name: `tokenUsage(<=${maxTokens})`,
@@ -150,16 +112,6 @@ export function tokenUsage(maxTokens: number): Assertion {
   };
 }
 
-// ============================================================================
-// LLM Judge
-// ============================================================================
-
-/**
- * Assert output quality using an LLM judge.
- *
- * The judge model receives the prompt, output, and criteria, then
- * returns PASS/FAIL with reasoning.
- */
 export function llmJudge(options: {
   model: LanguageModel;
   criteria: string;
@@ -170,7 +122,6 @@ export function llmJudge(options: {
     name: assertionName ?? `llmJudge("${criteria.slice(0, 30)}")`,
     check: async (result) => {
       try {
-        // Dynamic import to avoid hard dependency on ai's generateText
         const { generateText } = await import('ai');
         const judgeResult = await generateText({
           model,
@@ -203,13 +154,6 @@ Respond with EXACTLY one line: "PASS" or "FAIL: <reason>"`,
   };
 }
 
-// ============================================================================
-// Custom Assertion
-// ============================================================================
-
-/**
- * Create a custom assertion from a function.
- */
 export function custom(
   name: string,
   checkFn: (result: EvalAgentResult) => boolean | { passed: boolean; message?: string },
