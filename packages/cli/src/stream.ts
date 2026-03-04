@@ -47,6 +47,8 @@ export async function consumeStream(
   let hasTextOutput = false;
   let streamError: string | undefined;
   let lastToolOutput: string | null = null;
+  let lastStepInputTokens = 0;
+  let lastStepOutputTokens = 0;
 
   let inReflection = false;
   let reflectionBuffer = '';
@@ -86,6 +88,8 @@ export async function consumeStream(
           const usage = chunk.usage as { inputTokens?: number; outputTokens?: number } | undefined;
           const tokensIn = usage?.inputTokens ?? 0;
           const tokensOut = usage?.outputTokens ?? 0;
+          lastStepInputTokens = tokensIn;
+          lastStepOutputTokens = tokensOut;
           stats.inputTokens += tokensIn;
           stats.outputTokens += tokensOut;
 
@@ -299,16 +303,11 @@ export async function consumeStream(
         spinner.stop();
         if (!quiet) {
           const elapsed = Date.now() - stats.startTime;
-          const totalUsage = chunk.totalUsage as
-            | { inputTokens?: number; outputTokens?: number }
-            | undefined;
-          if (totalUsage) {
-            stats.inputTokens = totalUsage.inputTokens ?? stats.inputTokens;
-            stats.outputTokens = totalUsage.outputTokens ?? stats.outputTokens;
-          }
+          const displayIn = lastStepInputTokens || stats.inputTokens;
+          const displayOut = lastStepOutputTokens || stats.outputTokens;
           const stepLabel = `${stats.steps} step${stats.steps !== 1 ? 's' : ''}`;
           const toolLabel = `${stats.toolCalls} tool call${stats.toolCalls !== 1 ? 's' : ''}`;
-          const tokLabel = `${colors.cyan(String(stats.inputTokens))}${colors.dim('→')}${colors.cyan(String(stats.outputTokens))} ${colors.dim('tok')}`;
+          const tokLabel = `${colors.cyan(String(displayIn))}${colors.dim('→')}${colors.cyan(String(displayOut))} ${colors.dim('tok')}`;
           const timeLabel = colors.dim(formatDuration(elapsed));
           status.write(
             `\n${colors.dim('──')} ${colors.green(colors.bold('done'))} ${colors.dim('──')} ${colors.dim(stepLabel)} ${colors.dim('|')} ${colors.dim(toolLabel)} ${colors.dim('|')} ${tokLabel} ${colors.dim('|')} ${timeLabel} ${colors.dim('──')}\n`,

@@ -46,8 +46,6 @@ describe('createAgent configuration', () => {
     expect(toolNames).toContain('background');
     expect(toolNames).toContain('glob');
     expect(toolNames).toContain('grep');
-    expect(toolNames).toContain('plan');
-    expect(toolNames).toContain('deep_reasoning');
     expect(toolNames).toContain('spawn_agent');
     expect(toolNames).toContain('check_agent');
   });

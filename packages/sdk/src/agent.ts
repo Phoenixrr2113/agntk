@@ -1,5 +1,6 @@
 /**
  * @fileoverview Main SDK agent implementation and lifecycle management.
+ * Handles agent creation, tool initialization, memory management, and execution loops.
  */
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
@@ -35,8 +36,8 @@ import { buildDynamicSystemPrompt } from './prompts/context';
 
 const log = createLogger('@agntk/core:agent');
 
-const SUB_AGENT_MAX_STEPS = 15;
-const DEFAULT_MAX_SPAWN_DEPTH = 2;
+const SUB_AGENT_MAX_STEPS = 50;
+const DEFAULT_MAX_SPAWN_DEPTH = 1;
 
 export const AGENT_STATE_BASE = '.agntk/agents';
 
@@ -164,7 +165,7 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
       maxSpawnDepth: DEFAULT_MAX_SPAWN_DEPTH,
       currentDepth: spawnDepth,
       registry: agentRegistry,
-      workspacePath: undefined,
+      workspacePath: join(agentStatePath, 'workspace'),
       onActivity: options.onSubAgentActivity,
       createAgent: (subAgentOptions) => {
         const subName = `${name}/${subAgentOptions.task.slice(0, 30).replace(/[^a-zA-Z0-9-]/g, '-')}`;

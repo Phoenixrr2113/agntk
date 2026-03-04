@@ -16,8 +16,6 @@ describe('Tool Presets', () => {
       expect(toolPresets.standard.tools).toContain('glob');
       expect(toolPresets.standard.tools).toContain('grep');
       expect(toolPresets.standard.tools).toContain('shell');
-      expect(toolPresets.standard.tools).toContain('plan');
-      expect(toolPresets.standard.tools).toContain('deep_reasoning');
     });
 
     it('should have full preset definition', () => {
@@ -48,8 +46,6 @@ describe('Tool Presets', () => {
       expect(tools.glob).toBeDefined();
       expect(tools.grep).toBeDefined();
       expect(tools.shell).toBeDefined();
-      expect(tools.plan).toBeDefined();
-      expect(tools.deep_reasoning).toBeDefined();
     });
 
     it('should create full preset with ast-grep', () => {

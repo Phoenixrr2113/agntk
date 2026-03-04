@@ -7,8 +7,6 @@ import { createGlobTool } from '../tools/glob';
 import { createGrepTool } from '../tools/grep';
 import { createAstGrepTools } from '../tools/ast-grep';
 import { createShellTool, createBackgroundTool } from '../tools/shell';
-import { createPlanTool, type PlanToolConfig } from '../tools/plan';
-import { createDeepReasoningTool } from '../tools/deep-reasoning';
 import { createBrowserTool } from '../tools/browser';
 import { createFileTools, type FileToolOptions } from '../tools/file';
 import { createProgressTools } from '../tools/progress';
@@ -20,15 +18,13 @@ export type ToolPresetLevel = 'none' | 'minimal' | 'standard' | 'full';
 export interface ToolPresetOptions {
   workspaceRoot?: string;
 
-  planConfig?: PlanToolConfig;
-
   customTools?: Record<string, unknown>;
 
   fileOptions?: FileToolOptions;
 }
 
 export function createToolPreset(preset: ToolPresetLevel, options: ToolPresetOptions = {}) {
-  const { workspaceRoot = process.cwd(), planConfig, customTools = {}, fileOptions } = options;
+  const { workspaceRoot = process.cwd(), customTools = {}, fileOptions } = options;
 
   switch (preset) {
     case 'none':
@@ -42,13 +38,13 @@ export function createToolPreset(preset: ToolPresetLevel, options: ToolPresetOpt
 
     case 'standard':
       return {
-        ...createStandardPreset(workspaceRoot, planConfig, fileOptions),
+        ...createStandardPreset(workspaceRoot, fileOptions),
         ...customTools,
       };
 
     case 'full':
       return {
-        ...createFullPreset(workspaceRoot, planConfig, fileOptions),
+        ...createFullPreset(workspaceRoot, fileOptions),
         ...customTools,
       };
 
@@ -61,14 +57,8 @@ function createMinimalPreset() {
   return createGlobTool();
 }
 
-function createStandardPreset(
-  workspaceRoot: string,
-  planConfig?: PlanToolConfig,
-  fileOptions?: FileToolOptions,
-) {
+function createStandardPreset(workspaceRoot: string, fileOptions?: FileToolOptions) {
   const shell = createShellTool(workspaceRoot);
-  const plan = createPlanTool(planConfig ?? {});
-  const deep_reasoning = createDeepReasoningTool();
 
   return {
     ...createGlobTool(),
@@ -78,18 +68,12 @@ function createStandardPreset(
     ...createWebSearchTool(),
     shell,
     background: createBackgroundTool(),
-    plan,
-    deep_reasoning,
   };
 }
 
-function createFullPreset(
-  workspaceRoot: string,
-  planConfig?: PlanToolConfig,
-  fileOptions?: FileToolOptions,
-) {
+function createFullPreset(workspaceRoot: string, fileOptions?: FileToolOptions) {
   return {
-    ...createStandardPreset(workspaceRoot, planConfig, fileOptions),
+    ...createStandardPreset(workspaceRoot, fileOptions),
     ...createAstGrepTools(),
     ...createProgressTools(workspaceRoot),
     browser: createBrowserTool(),
@@ -105,8 +89,7 @@ export const toolPresets = {
   },
 
   standard: {
-    description:
-      'Glob, grep, shell, background, file tools, search_skills, web_search, plan, deep_reasoning',
+    description: 'Glob, grep, shell, background, file tools, search_skills, web_search',
     tools: [
       'glob',
       'grep',
@@ -118,8 +101,6 @@ export const toolPresets = {
       'file_create',
       'search_skills',
       'web_search',
-      'plan',
-      'deep_reasoning',
     ],
   },
 
@@ -138,8 +119,6 @@ export const toolPresets = {
       'progress_update',
       'search_skills',
       'web_search',
-      'plan',
-      'deep_reasoning',
       'ast_grep_search',
       'ast_grep_replace',
       'browser',
