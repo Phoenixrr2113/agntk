@@ -1,5 +1,11 @@
 # @agntk/core
 
+## 1.2.1
+
+### Patch Changes
+
+- Fix cleanAgents() to recursively delete sub-agents and update default model defaults
+
 ## 1.1.0
 
 ### Minor Changes
