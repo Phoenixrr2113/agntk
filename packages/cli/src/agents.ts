@@ -827,11 +827,32 @@ export async function cleanAgents(): Promise<void> {
     return;
   }
 
+  let subCount = 0;
   for (const i of toDelete) {
     const a = agentEntries[i]!;
     rmSync(a.dir, { recursive: true, force: true });
-    console.log(`  ${colors.green('Deleted')} ${a.name}`);
+
+    // Also clean up sub-agent directories (same as deleteAgent)
+    if (existsSync(AGENTS_DIR)) {
+      const subDirs = readdirSync(AGENTS_DIR, { withFileTypes: true }).filter(
+        (e) => e.isDirectory() && e.name.startsWith(`${a.name}_`),
+      );
+      for (const sub of subDirs) {
+        rmSync(join(AGENTS_DIR, sub.name), { recursive: true, force: true });
+      }
+      if (subDirs.length > 0) {
+        subCount += subDirs.length;
+        console.log(
+          `  ${colors.green('Deleted')} ${a.name} ${colors.dim(`(+ ${subDirs.length} sub-agent${subDirs.length > 1 ? 's' : ''})`)}`,
+        );
+      } else {
+        console.log(`  ${colors.green('Deleted')} ${a.name}`);
+      }
+    } else {
+      console.log(`  ${colors.green('Deleted')} ${a.name}`);
+    }
   }
 
-  console.log(`\n  ${colors.green(`Removed ${toDelete.length} agent(s)`)}`);
+  const total = toDelete.length + subCount;
+  console.log(`\n  ${colors.green(`Removed ${total} agent(s)`)}`);
 }
