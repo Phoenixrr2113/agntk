@@ -22,9 +22,9 @@
   "dependencies": {
     "@agntk/logger": "workspace:*",
     "@agntk/core": "workspace:*",
-    "@hono/node-server": "^1.13.8",
+    "@hono/node-server": "^1.19.11",
     "@hono/node-ws": "^1.3.0",
-    "hono": "^4.12.3"
+    "hono": "^4.12.5"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",

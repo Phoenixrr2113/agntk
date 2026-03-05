@@ -36,7 +36,7 @@
   "dependencies": {
     "@agntk/logger": "workspace:*",
     "@agntk/search": "workspace:*",
-    "@ai-sdk/openai-compatible": "^2.0.31",
+    "@ai-sdk/openai-compatible": "^2.0.35",
     "ai": "6.0.105",
     "yaml": "^2.8.2",
     "zod": "^4.3.6"
