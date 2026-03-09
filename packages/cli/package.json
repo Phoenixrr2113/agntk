@@ -28,8 +28,8 @@
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
-    "@types/node": "^25.3.3",
-    "ai": "6.0.77",
+    "@types/node": "^25.4.0",
+    "ai": "6.0.116",
     "typescript": "^5.7.3",
     "vitest": "^4.0.18"
   },

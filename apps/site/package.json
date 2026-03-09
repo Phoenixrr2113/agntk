@@ -12,12 +12,12 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.37.6",
+    "@astrojs/starlight": "^0.37.7",
     "@astrojs/vercel": "^9.0.4",
     "@fontsource-variable/inter": "^5.0.0",
     "@fontsource/jetbrains-mono": "^5.0.0",
     "@upstash/ratelimit": "^2.0.0",
-    "@upstash/redis": "^1.34.0",
+    "@upstash/redis": "^1.36.4",
     "astro": "^5.18.0"
   },
   "devDependencies": {
