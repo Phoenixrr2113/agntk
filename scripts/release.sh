@@ -30,6 +30,7 @@ pnpm build
 PACKAGES=(
   "@agntk/core"
   "@agntk/logger"
+  "@agntk/search"
   "@agntk/client"
   "@agntk/server"
   "@agntk/cli"
