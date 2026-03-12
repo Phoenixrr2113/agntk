@@ -1,5 +1,8 @@
 # @agntk/search
 
+[![npm version](https://img.shields.io/npm/v/@agntk/search.svg)](https://www.npmjs.com/package/@agntk/search)
+[![license](https://img.shields.io/npm/l/@agntk/search.svg)](https://github.com/agntk/agntk/blob/main/LICENSE)
+
 Multi-provider web search with automatic fallback chain. Works out of the box with DuckDuckGo (no API key needed) and falls back across providers when one fails.
 
 ## Installation

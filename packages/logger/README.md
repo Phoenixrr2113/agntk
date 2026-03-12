@@ -1,5 +1,8 @@
 # @agntk/logger
 
+[![npm version](https://img.shields.io/npm/v/@agntk/logger.svg)](https://www.npmjs.com/package/@agntk/logger)
+[![license](https://img.shields.io/npm/l/@agntk/logger.svg)](https://github.com/agntk/agntk/blob/main/LICENSE)
+
 Zero-dependency structured logging with namespace filtering, file output, and SSE support.
 
 ## Install
@@ -30,7 +33,12 @@ DEBUG=@agntk/*,-@agntk/core:verbose node app.js
 ## Transports
 
 ```typescript
-import { createConsoleTransport, createFileTransport, createSSETransport, addTransport } from '@agntk/logger';
+import {
+  createConsoleTransport,
+  createFileTransport,
+  createSSETransport,
+  addTransport,
+} from '@agntk/logger';
 
 addTransport(createConsoleTransport({ colorize: true }));
 addTransport(createFileTransport({ path: './logs/agent.log' }));

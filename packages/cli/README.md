@@ -1,5 +1,8 @@
 # @agntk/cli
 
+[![npm version](https://img.shields.io/npm/v/@agntk/cli.svg)](https://www.npmjs.com/package/@agntk/cli)
+[![license](https://img.shields.io/npm/l/@agntk/cli.svg)](https://github.com/agntk/agntk/blob/main/LICENSE)
+
 CLI for [agntk](https://www.npmjs.com/package/agntk) — a portable AI agent you install and point at problems.
 
 > **Most users should install [`agntk`](https://www.npmjs.com/package/agntk) instead**, which re-exports this package and works with `npx agntk`.

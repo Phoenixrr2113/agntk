@@ -1,5 +1,8 @@
 # agntk
 
+[![npm version](https://img.shields.io/npm/v/agntk.svg)](https://www.npmjs.com/package/agntk)
+[![license](https://img.shields.io/npm/l/agntk.svg)](https://github.com/agntk/agntk/blob/main/LICENSE)
+
 AI agent you install and point at problems. Zero config. Works immediately.
 
 ```bash

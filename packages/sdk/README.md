@@ -1,5 +1,8 @@
 # @agntk/core
 
+[![npm version](https://img.shields.io/npm/v/@agntk/core.svg)](https://www.npmjs.com/package/@agntk/core)
+[![license](https://img.shields.io/npm/l/@agntk/core.svg)](https://github.com/agntk/agntk/blob/main/LICENSE)
+
 Core agent factory for the Agent SDK. Built on [Vercel AI SDK](https://ai-sdk.dev).
 
 ## Installation
