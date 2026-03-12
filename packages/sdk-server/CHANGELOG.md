@@ -1,5 +1,14 @@
 # @agntk/server
 
+## 1.2.2
+
+### Patch Changes
+
+- Improve package READMEs with npm badges, expanded API docs, and usage examples
+- Updated dependencies
+  - @agntk/core@1.2.2
+  - @agntk/logger@1.2.2
+
 ## 1.2.1
 
 ### Patch Changes
