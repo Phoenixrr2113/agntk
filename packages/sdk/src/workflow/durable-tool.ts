@@ -1,4 +1,4 @@
-import type { Tool } from 'ai';
+import type { Tool, ToolExecutionOptions } from 'ai';
 import { createLogger } from '@agntk/logger';
 
 const log = createLogger('@agntk/core:workflow:tool');
@@ -28,8 +28,7 @@ export function wrapToolAsDurableStep(
     return tool;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const originalExecute = (tool as any).execute;
+  const originalExecute = tool.execute;
   if (!originalExecute) {
     return tool;
   }
@@ -38,8 +37,7 @@ export function wrapToolAsDurableStep(
 
   const wrappedTool = {
     ...tool,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    execute: async (input: any, options: any) => {
+    execute: async (input: unknown, options: ToolExecutionOptions) => {
       'use step';
 
       log.debug(`Executing durable step: ${stepName}`, {
@@ -101,13 +99,11 @@ export function wrapToolAsIndependentStep(tool: Tool, toolName?: string): Tool {
 export const DURABILITY_CONFIG = Symbol('durabilityConfig');
 
 export function getDurabilityConfig(tool: Tool): DurabilityConfig | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (tool as any)[DURABILITY_CONFIG];
+  return (tool as Record<symbol, unknown>)[DURABILITY_CONFIG] as DurabilityConfig | undefined;
 }
 
 export function setDurabilityConfig(tool: Tool, config: DurabilityConfig): Tool {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (tool as any)[DURABILITY_CONFIG] = config;
+  (tool as Record<symbol, unknown>)[DURABILITY_CONFIG] = config;
   return tool;
 }
 
