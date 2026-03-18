@@ -1,6 +1,6 @@
 {
   "name": "@agntk/server",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "module",
   "description": "HTTP/WebSocket server for @agntk/core",
   "main": "./dist/index.js",

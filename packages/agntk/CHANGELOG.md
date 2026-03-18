@@ -1,5 +1,11 @@
 # agntk
 
+## 1.2.3
+
+### Patch Changes
+
+- @agntk/cli@1.2.3
+
 ## 1.2.2
 
 ### Patch Changes

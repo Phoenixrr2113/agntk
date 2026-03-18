@@ -1,5 +1,11 @@
 # @agntk/logger
 
+## 1.2.3
+
+### Patch Changes
+
+- Sync linked package versions
+
 ## 1.2.2
 
 ### Patch Changes

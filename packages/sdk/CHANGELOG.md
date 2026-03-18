@@ -1,5 +1,12 @@
 # @agntk/core
 
+## 1.2.3
+
+### Patch Changes
+
+- Update `ai` dependency from 6.0.105 to 6.0.116
+- Fix glob and grep tools when ripgrep (rg) is not installed: use `find` instead of `grep` binary for file discovery, strip path prefixes from glob patterns for `find -name` compatibility, and add `-E` flag to enable extended regex in grep fallback
+
 ## 1.2.2
 
 ### Patch Changes
