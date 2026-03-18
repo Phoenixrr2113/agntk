@@ -56,7 +56,7 @@ function buildRgArgs(options: GrepOptions): string[] {
 }
 
 function buildGrepArgs(options: GrepOptions): string[] {
-  const args: string[] = [...GREP_SAFETY_FLAGS, '-r'];
+  const args: string[] = [...GREP_SAFETY_FLAGS, '-r', '-E'];
 
   if (options.context !== undefined && options.context > 0) {
     args.push(`-C${Math.min(options.context, 10)}`);

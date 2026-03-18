@@ -50,7 +50,9 @@ function buildFindArgs(options: GlobOptions): string[] {
   args.push('(', ...pruneExprs, '-true', ')');
 
   args.push('-type', 'f');
-  args.push('-name', options.pattern);
+  // `find -name` only matches the filename component; strip path prefixes like "**/".
+  const namePattern = options.pattern.split('/').pop() || '*';
+  args.push('-name', namePattern);
 
   if (!options.hidden) {
     args.push('-not', '-path', '*/.*');
@@ -117,7 +119,7 @@ export async function runRgFiles(
     args = buildFindArgs(options);
     const paths = options.paths?.length ? options.paths : ['.'];
     cwd = paths[0] || '.';
-    command = cli.path;
+    command = 'find';
   }
 
   return new Promise((resolve) => {
