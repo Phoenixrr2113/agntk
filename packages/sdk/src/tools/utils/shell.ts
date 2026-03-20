@@ -66,7 +66,10 @@ export function validateCwd(cwd: string, workspaceRoot: string): string {
     realWorkspace = path.resolve(workspaceRoot);
   }
   if (!resolvedCwd.startsWith(realWorkspace + path.sep) && resolvedCwd !== realWorkspace) {
-    throw new Error(`cwd "${cwd}" is outside workspace root`);
+    throw new Error(
+      `[agntk] Working directory "${cwd}" is outside the workspace root (${realWorkspace}). ` +
+        `Shell commands must run within the workspace. Use a relative path or change the workspace root in your config.`,
+    );
   }
   return resolvedCwd;
 }

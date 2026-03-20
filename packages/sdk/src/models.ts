@@ -66,7 +66,12 @@ function getProvider(providerName: string): ReturnType<typeof createOpenAICompat
   } else if (PROVIDER_CONFIGS[providerName]) {
     providerConfig = PROVIDER_CONFIGS[providerName];
   } else {
-    throw new Error(`Unknown provider: ${providerName}. Configure it in models.customProviders.`);
+    const builtIn = Object.keys(PROVIDER_CONFIGS).join(', ');
+    throw new Error(
+      `[agntk] Unknown provider: "${providerName}". ` +
+        `Built-in providers: ${builtIn}. ` +
+        `To use a custom provider, add it under models.customProviders in your agent-sdk.config.yaml.`,
+    );
   }
 
   const apiKey =

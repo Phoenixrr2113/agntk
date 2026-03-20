@@ -49,7 +49,9 @@ export function createToolPreset(preset: ToolPresetLevel, options: ToolPresetOpt
       };
 
     default:
-      throw new Error(`Unknown tool preset: ${preset}`);
+      throw new Error(
+        `[agntk] Unknown tool preset: "${preset}". Valid presets are: none, minimal, standard, full.`,
+      );
   }
 }
 

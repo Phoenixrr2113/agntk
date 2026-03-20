@@ -54,7 +54,13 @@ function parseConfigFile(path: string): PartialAgentConfig {
   const result = PartialAgentConfigSchema.safeParse(parsed);
   if (!result.success) {
     log.error('Invalid config file', { path, errors: result.error.issues });
-    throw new Error(`Invalid config file: ${result.error.message}`);
+    const firstIssue = result.error.issues[0];
+    const location = firstIssue?.path.length ? ` at "${firstIssue.path.join('.')}"` : '';
+    throw new Error(
+      `[agntk] Invalid config file: ${path}\n` +
+        `  First error${location}: ${firstIssue?.message ?? result.error.message}\n` +
+        `  Fix your agent-sdk.config.yaml or run with AGENT_SDK_CONFIG to use a different path.`,
+    );
   }
 
   return result.data;

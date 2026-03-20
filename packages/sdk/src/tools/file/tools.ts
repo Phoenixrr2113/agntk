@@ -25,7 +25,9 @@ function resolveAndValidatePath(
   allowedPaths: string[] = [],
 ): string {
   if (filePath.includes('\0')) {
-    throw new Error('Null bytes not allowed in file paths');
+    throw new Error(
+      '[agntk] Null bytes are not allowed in file paths — the path appears to be malformed or corrupted.',
+    );
   }
 
   const resolved = path.resolve(workspaceRoot, filePath);
@@ -53,13 +55,19 @@ function resolveAndValidatePath(
     }
     const ancestorReal = fs.realpathSync(checkDir);
     if (!isWithinAllowedRoots(ancestorReal, allRoots)) {
-      throw new Error(`Path "${filePath}" is outside workspace root`);
+      throw new Error(
+        `[agntk] Path "${filePath}" is outside workspace root (${realWorkspace}). ` +
+          `Use a relative path within the workspace or add it to fileOptions.allowedPaths.`,
+      );
     }
     return resolved;
   }
 
   if (!isWithinAllowedRoots(realResolved, allRoots)) {
-    throw new Error(`Path "${filePath}" is outside workspace root`);
+    throw new Error(
+      `[agntk] Path "${filePath}" is outside workspace root (${realWorkspace}). ` +
+        `Use a relative path within the workspace or add it to fileOptions.allowedPaths.`,
+    );
   }
 
   return realResolved;
