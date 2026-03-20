@@ -1,5 +1,15 @@
 # @agntk/core
 
+## 1.2.4
+
+### Patch Changes
+
+- chore: update dependencies — vitest 4.1.0, turbo 2.8.20, @types/node 25.5.0, hono 4.12.8
+- fix: improve error messages across core SDK with [agntk] prefix and actionable context
+- Updated dependencies
+  - @agntk/logger@1.2.4
+  - @agntk/search@1.0.2
+
 ## 1.2.3
 
 ### Patch Changes

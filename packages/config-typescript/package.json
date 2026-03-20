@@ -7,5 +7,9 @@
   "files": [
     "*.json"
   ],
-  "keywords": ["typescript", "config", "tsconfig"]
+  "keywords": [
+    "typescript",
+    "config",
+    "tsconfig"
+  ]
 }

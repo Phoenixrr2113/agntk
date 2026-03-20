@@ -1,5 +1,15 @@
 # @agntk/server
 
+## 1.2.4
+
+### Patch Changes
+
+- chore: update dependencies — vitest 4.1.0, turbo 2.8.20, @types/node 25.5.0, hono 4.12.8
+- Updated dependencies
+- Updated dependencies
+  - @agntk/core@1.2.4
+  - @agntk/logger@1.2.4
+
 ## 1.2.3
 
 ### Patch Changes
