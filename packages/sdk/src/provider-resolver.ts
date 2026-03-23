@@ -79,7 +79,9 @@ async function probeOllama(): Promise<ResolvedProvider | null> {
     if (!response.ok) return null;
 
     const data = (await response.json()) as { models?: Array<{ name: string }> };
-    const installedModels = (data.models || []).map((m) => m.name.toLowerCase());
+    const installedModels = (data.models || [])
+      .map((m) => (m.name ?? '').toLowerCase())
+      .filter(Boolean);
 
     if (installedModels.length === 0) {
       log.info('Ollama running but no models installed', { baseUrl });

@@ -32,6 +32,7 @@ Production hardening and feature plan. Each phase is independently shippable.
 ### 1.4 — Expand Sensitive File Blocklist
 
 Add to `SENSITIVE_PATH_PATTERNS`:
+
 - `.kube/config`, `.docker/config.json`, `.npmrc`, `.yarnrc.yml`, `.pypirc`
 - `.gnupg/`, `.gitconfig`, `.git-credentials`
 - `.gcloud/`, `.azure/`, `.config/gcloud/`
@@ -69,6 +70,7 @@ Add to `SENSITIVE_PATH_PATTERNS`:
 - Added to `DANGEROUS_TOOLS` (triggers future agent runs)
 
 **Example UX**:
+
 ```
 $ npx agntk "remind me to check the build at 3pm"
   ✓ Scheduled: "check the build" at 3:00 PM today
@@ -96,6 +98,7 @@ $ npx agntk "run tests every weekday at 9am"
 - Returns: synthesis, confidence score, source count
 
 **Example UX**:
+
 ```
 $ npx agntk "research the best database for real-time analytics"
   [researching] decomposing into 3 sub-questions...
@@ -134,25 +137,93 @@ $ npx agntk "research the best database for real-time analytics"
 
 **Goal**: Prevent context overflow, enable semantic search, manage memory lifecycle.
 
-### 5.1 — Context Window Tracking
+_Informed by [OpenViking](https://github.com/volcengine/OpenViking) tiered context + filesystem-as-context architecture._
+
+### 5.1 — Tiered Context Loading
 
 - Token estimation (4 chars ≈ 1 token)
 - Auto-compress memory context when over 80% of window
+- **Tiered loading in `MarkdownMemoryStore`**: L0 (section headers only), L1 (first line per entry), L2 (full content)
+- Agent requests detail on demand — default to L0/L1, expand to L2 when relevant
 
 ### 5.2 — Memory TTL and Pruning
 
 - Date-prefixed entries, configurable TTL (default: 90 days)
 - Max entries cap (default: 200)
+- Copy-on-write for memory updates (write `.tmp`, rename) — mirrors 2.1 atomic write pattern
 
 ### 5.3 — Semantic Memory Search
 
 - Optional Vectra adapter for embedding-based search
 - Auto-detected: uses embeddings if vectra installed, keyword search otherwise
+- **Directory-recursive retrieval**: narrow to relevant section (memory/decisions/preferences) via intent analysis before semantic search within it
 
 ### 5.4 — Cross-Agent Memory Search
 
 - `recall_global` tool — searches all agents' memories
 - Read-only access to `~/.agntk/agents/`
+
+### 5.5 — Retrieval Observability
+
+- Extend Langfuse + OpenTelemetry integration to trace memory reads
+- Each retrieval logs: path, tier loaded (L0/L1/L2), reason, latency
+
+---
+
+## Phase 6: Evaluation + Red-Teaming
+
+**Goal**: Systematic testing of agent prompts, model comparison, and proactive vulnerability discovery.
+
+_Powered by [PromptFoo](https://github.com/promptfoo/promptfoo) as the evaluation backend (wrapped, not vendored)._
+
+### 6.1 — Eval Framework
+
+- `@agntk/evals` package wrapping PromptFoo as evaluation engine
+- `agntk eval` CLI command — run assertion-based tests against agent configs
+- Assertion library: exact match, contains, LLM-graded, regex, JSON schema, custom
+- Model comparison: benchmark which provider/model performs best for a given agent task
+- Regression detection: CI-friendly exit codes for prompt quality regressions
+
+### 6.2 — Red-Team Suite
+
+- `agntk redteam` CLI command — runs PromptFoo's red-team plugins against a named agent
+- Tests agent's system prompt + tools + skills against: prompt injection, data exfiltration, PII leakage, jailbreaks, encoding attacks
+- Validates agntk's guardrails pipeline with offensive testing (complements the defensive runtime filtering)
+
+### 6.3 — CI Integration
+
+- Use PromptFoo in agntk's own CI to regression-test system prompt changes and tool descriptions
+- Provider adapter: agntk agents testable as PromptFoo providers via `@ai-sdk/openai-compatible` layer
+
+### Implementation Notes
+
+- PromptFoo is pre-1.0 (~v0.121) and large (~7,700 commits) — wrap behind agntk's own API surface
+- Expose a stable `@agntk/evals` interface so the underlying engine can be swapped if needed
+
+---
+
+## Phase 7: Agent Templates + Skills Enhancement
+
+**Goal**: Structured agent definitions, starter templates, and richer skills system.
+
+_Draws from [Agency Agents](https://github.com/msitarzewski/agency-agents) persona format and [Impeccable](https://github.com/pbakaus/impeccable) skill bundling patterns._
+
+### 7.1 — Structured Identity Schema
+
+- Extend `identity.md` with optional structured sections: role, expertise areas, constraints, success metrics, deliverables
+- Keep structured fields optional — freeform still works
+- Validate structure and estimate token cost during `agntk` startup (lint on load)
+
+### 7.2 — Starter Agent Templates
+
+- Ship 5-10 curated templates: Code Reviewer, Security Auditor, DevOps SRE, Test Engineer, API Designer
+- `agntk create --template <name>` CLI command for scaffolding named agents
+- Templates include: identity, default skills, recommended tool set
+
+### 7.3 — Skills System Enhancement
+
+- **Anti-patterns section** in `SKILL.md` schema — structured "what NOT to do" guidance injected into system prompt
+- **Skill-defined commands** — skills register custom slash commands that trigger specific prompt templates (e.g., security skill exposes `/scan`, `/audit`, `/harden`)
 
 ---
 
@@ -168,4 +239,8 @@ Phase 3 (Research) ──┐── reuses existing spawn-agent + best-of-n
 Phase 5 (Memory) ─────┘── independent, can parallelize with Phase 3
     │
 Phase 4 (Orchestration) ──── builds on Phases 2-3
+    │
+Phase 6 (Eval + Red-Team) ──── independent, can start after Phase 1
+    │
+Phase 7 (Templates + Skills) ──── independent, can start anytime
 ```

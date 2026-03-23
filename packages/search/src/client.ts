@@ -51,7 +51,7 @@ export function createSearchClient(config?: SearchConfig): SearchClient {
       };
 
       const response = await searchWithFallback(resolved, query, mergedOptions);
-      const urls = response.results.slice(0, extractTop);
+      const urls = (response.results ?? []).slice(0, extractTop);
 
       const extractions = await Promise.allSettled(
         urls.map((r) => extractContent(r.url, extractOptions)),
