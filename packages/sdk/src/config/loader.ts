@@ -54,8 +54,8 @@ function parseConfigFile(path: string): PartialAgentConfig {
   const result = PartialAgentConfigSchema.safeParse(parsed);
   if (!result.success) {
     log.error('Invalid config file', { path, errors: result.error.issues });
-    const firstIssue = result.error.issues[0];
-    const location = firstIssue?.path.length ? ` at "${firstIssue.path.join('.')}"` : '';
+    const firstIssue = result.error.issues?.[0];
+    const location = firstIssue?.path?.length ? ` at "${firstIssue.path.join('.')}"` : '';
     throw new Error(
       `[agntk] Invalid config file: ${path}\n` +
         `  First error${location}: ${firstIssue?.message ?? result.error.message}\n` +

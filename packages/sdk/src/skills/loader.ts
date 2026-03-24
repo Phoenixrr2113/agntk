@@ -354,8 +354,8 @@ export function searchSkills(skills: SkillMeta[], query: string, limit = 5): Ski
 
   for (const skill of skills) {
     let score = 0;
-    const nameLower = skill.name.toLowerCase();
-    const descLower = skill.description.toLowerCase();
+    const nameLower = (skill.name ?? '').toLowerCase();
+    const descLower = (skill.description ?? '').toLowerCase();
     const tagsLower = (skill.tags ?? []).map((t) => t.toLowerCase());
     const whenLower = (skill.whenToUse ?? '').toLowerCase();
 

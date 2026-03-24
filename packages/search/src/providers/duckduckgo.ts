@@ -107,8 +107,8 @@ export class DuckDuckGoProvider implements SearchProvider {
           .slice(0, maxResults)
           .map(
             (r: { title: string; url: string; description: string; rawDescription?: string }) => ({
-              title: r.title,
-              url: r.url,
+              title: r.title ?? '',
+              url: r.url ?? '',
               snippet: r.description || r.rawDescription || '',
               source: this.name,
             }),

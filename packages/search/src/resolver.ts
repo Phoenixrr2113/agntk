@@ -91,13 +91,20 @@ export function resolveSearchProviders(config?: SearchConfig): ResolvedSearchPro
 
   const [primary, ...fallbacks] = available;
 
+  if (!primary) {
+    throw new SearchError(
+      '[agntk] Failed to select a primary search provider from the available list.',
+      'resolver',
+    );
+  }
+
   log.debug('auto-detected provider', {
-    primary: primary!.name,
+    primary: primary.name,
     fallbacks: fallbacks.map((p) => p.name),
   });
 
   return {
-    primary: primary!,
+    primary,
     fallbacks,
     source: 'auto',
   };

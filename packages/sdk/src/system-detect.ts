@@ -103,7 +103,7 @@ function detectNvidiaVRAM(): number | null {
       stdio: ['pipe', 'pipe', 'pipe'],
     }).trim();
 
-    const mb = parseInt(output.split('\n')[0], 10);
+    const mb = parseInt(output.split('\n')[0] ?? '0', 10);
     if (!isNaN(mb) && mb > 0) {
       return Math.round((mb / 1024) * 10) / 10;
     }

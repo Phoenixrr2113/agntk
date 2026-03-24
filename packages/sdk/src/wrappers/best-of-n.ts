@@ -121,6 +121,12 @@ export async function withBestOfN(
 
   scoredCandidates.sort((a, b) => b.score - a.score);
 
+  if (scoredCandidates.length === 0) {
+    throw new Error(
+      '[agntk] Best-of-N judge returned no scored candidates — cannot determine best result',
+    );
+  }
+
   const result: BestOfNResult = {
     best: scoredCandidates[0],
     candidates: scoredCandidates,
