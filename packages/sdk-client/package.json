@@ -21,12 +21,12 @@
   },
   "dependencies": {
     "@agntk/logger": "workspace:*",
-    "ai": "6.0.134"
+    "ai": "6.0.137"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
     "typescript": "^5.7.3",
-    "vitest": "^4.1.0",
+    "vitest": "^4.1.1",
     "@types/node": "^25.5.0"
   },
   "files": [
