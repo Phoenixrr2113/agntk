@@ -1,6 +1,6 @@
 {
   "name": "@agntk/search",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "Multi-provider web search with fallback chain for AI agents",
   "main": "./dist/index.js",

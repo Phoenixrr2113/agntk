@@ -1,5 +1,14 @@
 # @agntk/cli
 
+## 1.2.5
+
+### Patch Changes
+
+- Update dependencies: ai 6.0.134→6.0.137, hono 4.12.8→4.12.9, vitest 4.1.0→4.1.1, typescript-eslint 8.57.1→8.57.2
+- Updated dependencies
+- Updated dependencies
+  - @agntk/core@1.2.5
+
 ## 1.2.4
 
 ### Patch Changes
