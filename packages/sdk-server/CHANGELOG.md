@@ -1,5 +1,14 @@
 # @agntk/server
 
+## 1.2.6
+
+### Patch Changes
+
+- Add JSDoc to all public API functions in @agntk/core; bump ai to 6.0.138; add security overrides for yaml, picomatch, smol-toml
+- Updated dependencies
+  - @agntk/core@1.2.6
+  - @agntk/logger@1.2.6
+
 ## 1.2.5
 
 ### Patch Changes
