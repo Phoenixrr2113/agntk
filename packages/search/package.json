@@ -1,6 +1,6 @@
 {
   "name": "@agntk/search",
-  "version": "1.0.3",
+  "version": "1.2.5",
   "type": "module",
   "description": "Multi-provider web search with fallback chain for AI agents",
   "main": "./dist/index.js",
@@ -47,12 +47,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/agntk/agntk.git",
+    "url": "https://github.com/Phoenixrr2113/agntk.git",
     "directory": "packages/search"
   },
-  "homepage": "https://github.com/agntk/agntk#readme",
+  "homepage": "https://github.com/Phoenixrr2113/agntk#readme",
   "bugs": {
-    "url": "https://github.com/agntk/agntk/issues"
+    "url": "https://github.com/Phoenixrr2113/agntk/issues"
   },
   "engines": {
     "node": ">=20.0.0"

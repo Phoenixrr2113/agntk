@@ -56,8 +56,6 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: pnpm build
-
       # Auto-generate changeset from conventional commits if none exist
       - name: Auto-generate changeset
         run: |
@@ -81,13 +79,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          VERSION=$(node -p "require('./packages/sdk/package.json').version")
-          gh release create "v${VERSION}" \
-            --title "v${VERSION}" \
-            --generate-notes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

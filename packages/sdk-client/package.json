@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@agntk/logger": "workspace:*",
-    "ai": "6.0.137"
+    "ai": "6.0.138"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
@@ -36,12 +36,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/agntk/agntk.git",
+    "url": "https://github.com/Phoenixrr2113/agntk.git",
     "directory": "packages/sdk-client"
   },
-  "homepage": "https://github.com/agntk/agntk#readme",
+  "homepage": "https://github.com/Phoenixrr2113/agntk#readme",
   "bugs": {
-    "url": "https://github.com/agntk/agntk/issues"
+    "url": "https://github.com/Phoenixrr2113/agntk/issues"
   },
   "engines": {
     "node": ">=20.0.0"

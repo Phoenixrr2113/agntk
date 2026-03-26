@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Publish all public @agntk packages to npm.
+# Publish all public @agntk packages to npm and create a GitHub release.
 #
-# In CI:     NPM_TOKEN comes from environment (secrets.NPM_TOKEN)
-# Locally:   NPM_TOKEN is loaded from .env
+# In CI:     NPM_TOKEN and GITHUB_TOKEN come from environment (GitHub secrets)
+# Locally:   Both tokens are loaded from .env
 #
 # Usage:  pnpm release        (from root)
 #    or:  bash scripts/release.sh
 set -euo pipefail
 
 # Load .env into environment when running locally
-if [[ -z "${NPM_TOKEN:-}" ]] && [[ -f .env ]]; then
+if [[ -f .env ]]; then
   set -a
   source .env
   set +a
@@ -37,11 +37,48 @@ PACKAGES=(
   "agntk"
 )
 
+PUBLISHED_COUNT=0
+
 for pkg in "${PACKAGES[@]}"; do
   echo ""
   echo "--- Publishing ${pkg} ---"
-  pnpm --filter "${pkg}" publish --access public --no-git-checks || echo "  Warning: ${pkg} publish failed (may already be at this version)"
+  # Read version via fs to avoid require() breaking in ESM packages ("type": "module")
+  PKG_VERSION=$(pnpm --filter "${pkg}" exec node --input-type=commonjs -e \
+    "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('./package.json','utf8')); process.stdout.write(p.version)")
+  # Skip cleanly if already published; any other error fails loudly (set -e)
+  if pnpm view "${pkg}@${PKG_VERSION}" version &>/dev/null; then
+    echo "  Skipping ${pkg}@${PKG_VERSION} — already published"
+  else
+    pnpm --filter "${pkg}" publish --access public --no-git-checks
+    PUBLISHED_COUNT=$((PUBLISHED_COUNT + 1))
+  fi
 done
 
 echo ""
-echo "Done! All packages published."
+if [ "$PUBLISHED_COUNT" -eq 0 ]; then
+  echo "No new packages published."
+  exit 0
+fi
+
+echo "Published ${PUBLISHED_COUNT} package(s)."
+
+# Create GitHub Release — skipped gracefully if gh CLI or GITHUB_TOKEN is unavailable (e.g. local runs without gh auth)
+if command -v gh &>/dev/null && [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  VERSION=$(python3 -c "import json; print(json.load(open('packages/sdk/package.json'))['version'])")
+  echo ""
+  echo "--- Creating GitHub Release v${VERSION} ---"
+  if gh release view "v${VERSION}" &>/dev/null; then
+    echo "  GitHub Release v${VERSION} already exists, skipping"
+  else
+    gh release create "v${VERSION}" \
+      --title "v${VERSION}" \
+      --generate-notes
+    echo "  GitHub Release v${VERSION} created"
+  fi
+else
+  echo ""
+  echo "Skipping GitHub Release (gh CLI not available or GITHUB_TOKEN not set)"
+fi
+
+echo ""
+echo "Done!"

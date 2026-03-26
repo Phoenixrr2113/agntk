@@ -29,7 +29,7 @@
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
     "@types/node": "^25.5.0",
-    "ai": "6.0.137",
+    "ai": "6.0.138",
     "typescript": "^5.7.3",
     "vitest": "^4.1.1"
   },
@@ -40,12 +40,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/agntk/agntk.git",
+    "url": "https://github.com/Phoenixrr2113/agntk.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/agntk/agntk#readme",
+  "homepage": "https://github.com/Phoenixrr2113/agntk#readme",
   "bugs": {
-    "url": "https://github.com/agntk/agntk/issues"
+    "url": "https://github.com/Phoenixrr2113/agntk/issues"
   },
   "engines": {
     "node": ">=20.0.0"

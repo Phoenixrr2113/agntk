@@ -15,12 +15,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/agntk/agntk.git",
+    "url": "https://github.com/Phoenixrr2113/agntk.git",
     "directory": "packages/agntk"
   },
-  "homepage": "https://github.com/agntk/agntk#readme",
+  "homepage": "https://github.com/Phoenixrr2113/agntk#readme",
   "bugs": {
-    "url": "https://github.com/agntk/agntk/issues"
+    "url": "https://github.com/Phoenixrr2113/agntk/issues"
   },
   "engines": {
     "node": ">=20.0.0"

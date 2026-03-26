@@ -4,7 +4,15 @@
   "commit": false,
   "fixed": [],
   "linked": [
-    ["@agntk/core", "@agntk/cli", "@agntk/server", "@agntk/client", "@agntk/logger", "agntk"]
+    [
+      "@agntk/core",
+      "@agntk/cli",
+      "@agntk/server",
+      "@agntk/client",
+      "@agntk/logger",
+      "@agntk/search",
+      "agntk"
+    ]
   ],
   "access": "public",
   "baseBranch": "main",

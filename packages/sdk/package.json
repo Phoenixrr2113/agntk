@@ -37,7 +37,7 @@
     "@agntk/logger": "workspace:*",
     "@agntk/search": "workspace:*",
     "@ai-sdk/openai-compatible": "^2.0.37",
-    "ai": "6.0.137",
+    "ai": "6.0.138",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
@@ -74,12 +74,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/agntk/agntk.git",
+    "url": "https://github.com/Phoenixrr2113/agntk.git",
     "directory": "packages/sdk"
   },
-  "homepage": "https://github.com/agntk/agntk#readme",
+  "homepage": "https://github.com/Phoenixrr2113/agntk#readme",
   "bugs": {
-    "url": "https://github.com/agntk/agntk/issues"
+    "url": "https://github.com/Phoenixrr2113/agntk/issues"
   },
   "engines": {
     "node": ">=20.0.0"
