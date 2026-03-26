@@ -1,12 +1,22 @@
 import type { ToolSet, StepResult } from 'ai';
 
+/**
+ * Token and request budget caps for an agent run.
+ *
+ * All fields are optional — omitting a field means that dimension is
+ * unconstrained.  At least one field should be set to have any effect.
+ */
 export interface UsageLimits {
+  /** Maximum number of LLM API calls (steps) across the entire run. */
   maxRequests?: number;
 
+  /** Maximum cumulative prompt tokens across all steps. */
   maxInputTokens?: number;
 
+  /** Maximum cumulative completion tokens across all steps. */
   maxOutputTokens?: number;
 
+  /** Maximum cumulative total tokens (input + output) across all steps. */
   maxTotalTokens?: number;
 }
 
@@ -23,6 +33,24 @@ export interface UsageSnapshot {
   totalTokens: number;
 }
 
+/**
+ * Thrown (not returned) by the stop-condition function created by
+ * {@link usageLimitStop} when a configured budget is exceeded.
+ *
+ * Callers can catch this to distinguish a budget-exceeded stop from a normal
+ * agent completion.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await agent.stream({ prompt });
+ * } catch (err) {
+ *   if (err instanceof UsageLimitExceeded) {
+ *     console.error(`Limit hit: ${err.limitType} = ${err.currentValue}`);
+ *   }
+ * }
+ * ```
+ */
 export class UsageLimitExceeded extends Error {
   override readonly name = 'UsageLimitExceeded';
   readonly limitType: UsageLimitType;
@@ -44,6 +72,24 @@ export class UsageLimitExceeded extends Error {
   }
 }
 
+/**
+ * Creates a stop-condition function compatible with the AI SDK's
+ * `ToolLoopAgent` `stopWhen` option.
+ *
+ * When any configured limit is exceeded the function **throws**
+ * {@link UsageLimitExceeded} rather than returning `true`, so the agent loop
+ * terminates immediately with a clear diagnostic error.
+ *
+ * @param limits - The budget caps to enforce.
+ * @returns A stop-condition callback that inspects cumulative usage after each
+ *   step and throws if any limit is surpassed.
+ *
+ * @example
+ * ```ts
+ * const stop = usageLimitStop({ maxInputTokens: 100_000, maxRequests: 20 });
+ * const agent = new ToolLoopAgent({ stopWhen: [stop], ... });
+ * ```
+ */
 export function usageLimitStop<TOOLS extends ToolSet>(
   limits: UsageLimits,
 ): (options: { steps: Array<StepResult<TOOLS>> }) => boolean {

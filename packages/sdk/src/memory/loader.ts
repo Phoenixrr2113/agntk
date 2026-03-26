@@ -6,6 +6,25 @@ const log = createLogger('@agntk/core:memory-loader');
 const CHARS_PER_TOKEN = 4;
 const TOKEN_WARNING_THRESHOLD = 2000;
 
+/**
+ * Assembles the persistent-memory block injected into the agent's system
+ * prompt at the start of every session.
+ *
+ * Reads the following sections from the store (each omitted when empty):
+ * - **Identity** – global `identity.md`
+ * - **Preferences** – global `preferences.md`
+ * - **Project** – project-level `project.md` (falls back to `CLAUDE.md` /
+ *   `AGENTS.md` in the workspace root)
+ * - **Memory Files** – directory listing of `memory/*.md` files
+ * - **Current Context** – project-level `context.md` (last session summary)
+ *
+ * Emits a warning when the assembled context exceeds ~2 000 tokens.
+ *
+ * @param store - A {@link MemoryStore} implementation that provides the
+ *   individual load methods.
+ * @returns The formatted memory block string, or an empty string when no
+ *   memory content is found.
+ */
 export async function loadMemoryContext(store: MemoryStore): Promise<string> {
   const sections: string[] = [];
 

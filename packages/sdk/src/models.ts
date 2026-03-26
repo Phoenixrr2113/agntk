@@ -125,11 +125,26 @@ export interface ResolvedProvider {
 
 let _resolvedProvider: ResolvedProvider | null = null;
 
+/**
+ * Stores a pre-resolved provider so that subsequent {@link resolveModel} calls
+ * use it instead of performing their own provider detection.
+ *
+ * Typically called once by the CLI's `init` command after
+ * {@link resolveProvider} has run.
+ *
+ * @param resolved - The provider resolved by the auto-detection cascade.
+ */
 export function setResolvedProvider(resolved: ResolvedProvider): void {
   _resolvedProvider = resolved;
   log.info('Provider set', { provider: resolved.provider, source: resolved.source });
 }
 
+/**
+ * Returns the cached resolved provider, or `null` if provider detection has
+ * not been run yet (or has been reset).
+ *
+ * @returns The currently cached {@link ResolvedProvider}, or `null`.
+ */
 export function getResolvedProviderState(): ResolvedProvider | null {
   return _resolvedProvider;
 }
@@ -194,10 +209,24 @@ function createTierModel(tier: ModelTier): LanguageModel {
   return createModelForProvider('openrouter', modelName);
 }
 
+/**
+ * Convenience accessors that return a {@link LanguageModel} for each speed /
+ * capability tier.  The concrete model and provider are selected via the same
+ * resolution logic as {@link resolveModel}.
+ *
+ * @example
+ * ```ts
+ * const agent = createAgent({ name: 'coder', model: models.powerful() });
+ * ```
+ */
 export const models = {
+  /** Returns the model configured for low-latency, lightweight tasks. */
   fast: (): LanguageModel => createTierModel('fast'),
+  /** Returns the default balanced model suitable for most tasks. */
   standard: (): LanguageModel => createTierModel('standard'),
+  /** Returns the model optimised for multi-step reasoning. */
   reasoning: (): LanguageModel => createTierModel('reasoning'),
+  /** Returns the most capable (and typically slowest/most expensive) model. */
   powerful: (): LanguageModel => createTierModel('powerful'),
 } as const;
 
@@ -214,6 +243,19 @@ export interface ResolvedModel {
   modelId: string;
 }
 
+/**
+ * Resolves a {@link LanguageModel} from the given options.
+ *
+ * Resolution priority:
+ * 1. If both `provider` and `modelName` are supplied, use them directly.
+ * 2. If `modelName` contains a `/` (OpenRouter `<org>/<model>` format), route
+ *    it through the `openrouter` provider automatically.
+ * 3. Otherwise, look up the model for the requested `tier` from the resolved
+ *    provider (or the configured default provider).
+ *
+ * @param options - Optional overrides for tier, provider, or model name.
+ * @returns The resolved {@link LanguageModel} together with its string ID.
+ */
 export function resolveModel(options: ModelResolutionOptions = {}): ResolvedModel {
   const { tier = 'standard', provider, modelName } = options;
   const config = getConfig();

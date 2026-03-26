@@ -113,6 +113,15 @@ function detectNvidiaVRAM(): number | null {
   }
 }
 
+/**
+ * Detects the current machine's hardware profile.
+ *
+ * Inspects total RAM, platform, whether it is Apple Silicon, and NVIDIA VRAM
+ * (via `nvidia-smi` if available).  The `usableForModelsGb` field applies a
+ * heuristic overhead deduction so callers can make informed model-size choices.
+ *
+ * @returns A {@link SystemProfile} describing the detected hardware.
+ */
 export function detectSystem(): SystemProfile {
   const totalBytes = os.totalmem();
   const totalRAMGb = Math.round((totalBytes / 1024 ** 3) * 10) / 10;
@@ -144,6 +153,21 @@ export function detectSystem(): SystemProfile {
   return profile;
 }
 
+/**
+ * Recommends Ollama model names for each speed tier based on the system
+ * profile and the set of actually-installed models.
+ *
+ * When `installedModels` is supplied the recommendation is clamped so that
+ * every tier uses a model that is already pulled locally.  If no usable model
+ * (≥ 8b parameters, or a cloud tag) is found, `noUsableModels` is set to
+ * `true` in the result.
+ *
+ * @param profile        - Hardware profile from {@link detectSystem}.  Detected
+ *   automatically when omitted.
+ * @param installedModels - List of model tag strings from `ollama list`.
+ * @returns An {@link OllamaModelRecommendation} with per-tier model names and
+ *   a human-readable `reason` string.
+ */
 export function recommendOllamaModels(
   profile?: SystemProfile,
   installedModels?: string[],
@@ -233,6 +257,17 @@ function pickBestAvailable(installed: Set<string>): string | null {
   return null;
 }
 
+/**
+ * Fetches the list of locally-installed Ollama model tags by querying the
+ * Ollama REST API.
+ *
+ * Uses a 2-second timeout.  Returns an empty array if Ollama is not running or
+ * the request fails for any reason.
+ *
+ * @param baseUrl - Ollama base URL (defaults to `OLLAMA_BASE_URL` env var, or
+ *   `http://localhost:11434`).
+ * @returns Array of model tag strings, e.g. `['qwen3:8b', 'llama3:latest']`.
+ */
 export async function getOllamaModels(baseUrl?: string): Promise<string[]> {
   const rawUrl = baseUrl || process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
   const url = rawUrl.replace(/\/(api|v1)\/?$/, '');
@@ -256,6 +291,16 @@ export async function getOllamaModels(baseUrl?: string): Promise<string[]> {
   }
 }
 
+/**
+ * Checks whether a specific Ollama model is installed locally.
+ *
+ * The check is prefix-based so `'qwen3:8b'` will match `'qwen3:8b-instruct'`.
+ *
+ * @param model  - Model tag to look for (case-insensitive prefix match).
+ * @param baseUrl - Optional Ollama base URL override.
+ * @returns `true` if the model is installed, `false` otherwise (including when
+ *   Ollama is not running).
+ */
 export async function hasOllamaModel(model: string, baseUrl?: string): Promise<boolean> {
   const models = await getOllamaModels(baseUrl);
 

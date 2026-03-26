@@ -39,8 +39,20 @@ const log = createLogger('@agntk/core:agent');
 const SUB_AGENT_MAX_STEPS = 50;
 const DEFAULT_MAX_SPAWN_DEPTH = 1;
 
+/** Base directory (relative to $HOME) where per-agent state is stored. */
 export const AGENT_STATE_BASE = '.agntk/agents';
 
+/**
+ * Resolves the absolute filesystem path for an agent's state directory.
+ *
+ * The path is derived from the agent name by sanitising it to only
+ * alphanumeric characters, hyphens, and underscores (all lowercased),
+ * then joining with {@link AGENT_STATE_BASE} under the current user's home
+ * directory.
+ *
+ * @param name - The agent name as passed to {@link createAgent}.
+ * @returns Absolute path to the agent's state directory.
+ */
 export function resolveAgentStatePath(name: string): string {
   const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return resolve(homedir(), AGENT_STATE_BASE, safeName);
@@ -116,6 +128,30 @@ export interface InternalOptions {
   _spawnDepth?: number;
 }
 
+/**
+ * Creates a fully-configured, persistent AI agent.
+ *
+ * The agent wires together:
+ * - A language model (auto-resolved via {@link resolveModel} if not supplied)
+ * - A full tool preset (file ops, shell, search, browser, reasoning, planning)
+ * - A markdown-backed memory and workspace system
+ * - Optional sub-agent spawning (one level deep by default)
+ * - Usage-limit stop conditions
+ * - Output guardrails (content filter)
+ * - Optional tool-level human approval
+ * - Optional Langfuse telemetry when `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` are set
+ *
+ * @param options  - Agent configuration. At minimum, `name` is required.
+ * @param _internal - Reserved for internal use (e.g. sub-agent spawn depth).
+ * @returns A configured {@link Agent} instance ready to call `.stream()`.
+ *
+ * @example
+ * ```ts
+ * const agent = createAgent({ name: 'my-agent', instructions: 'You are a helpful assistant.' });
+ * const result = await agent.stream({ prompt: 'What is 2+2?' });
+ * console.log(await result.text);
+ * ```
+ */
 export function createAgent(options: AgentOptions, _internal: InternalOptions = {}): Agent {
   const { name, instructions, workspaceRoot = process.cwd() } = options;
 

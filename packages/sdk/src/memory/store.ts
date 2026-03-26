@@ -46,6 +46,21 @@ export interface MarkdownMemoryStoreOptions {
   workspaceRoot?: string;
 }
 
+/**
+ * File-system-backed implementation of {@link MemoryStore} that persists agent
+ * state as plain Markdown files.
+ *
+ * Directory layout (relative to `projectDir`):
+ * ```
+ * <projectDir>/
+ *   memory/          ← long-term knowledge files (*.md)
+ *   workspace/       ← active task folders; current/ symlink points to latest
+ *   archive/         ← completed task folders moved from workspace/
+ * ```
+ *
+ * Global files (identity, preferences) are stored under `globalDir` in the
+ * user's home directory so they are shared across projects.
+ */
 export class MarkdownMemoryStore implements MemoryStore {
   private readonly projectPath: string;
   private readonly globalPath: string;
@@ -116,6 +131,14 @@ export class MarkdownMemoryStore implements MemoryStore {
     }
   }
 
+  /**
+   * Creates a timestamped task folder inside the workspace directory and
+   * updates the `current` symlink to point at it.
+   *
+   * @param label - Short human-readable label incorporated into the folder
+   *   name (sanitised to `[a-z0-9-_]`).
+   * @returns Absolute path of the newly created task folder.
+   */
   async createTaskFolder(label: string): Promise<string> {
     const workspaceDir = this.getWorkspacePath();
     await this.ensureDir(workspaceDir);
@@ -147,6 +170,12 @@ export class MarkdownMemoryStore implements MemoryStore {
     return folderPath;
   }
 
+  /**
+   * Moves a completed task folder from `workspace/` to `archive/`, and
+   * removes the `current` symlink if it was pointing at that folder.
+   *
+   * @param taskFolderName - Basename of the folder inside `workspace/`.
+   */
   async archiveTask(taskFolderName: string): Promise<void> {
     const sourcePath = join(this.getWorkspacePath(), taskFolderName);
     const destPath = join(this.getArchivePath(), taskFolderName);
@@ -174,6 +203,13 @@ export class MarkdownMemoryStore implements MemoryStore {
     log.info('Task archived', { from: sourcePath, to: destPath });
   }
 
+  /**
+   * Returns the absolute path of the currently active task folder by reading
+   * the `workspace/current` symlink.
+   *
+   * @returns The resolved path, or `null` if no active task exists or the
+   *   symlink target has been deleted.
+   */
   async getCurrentTaskPath(): Promise<string | null> {
     const symlinkPath = join(this.getWorkspacePath(), CURRENT_SYMLINK);
     try {
@@ -207,6 +243,12 @@ export class MarkdownMemoryStore implements MemoryStore {
     return join(this.projectPath, DIRS.archive);
   }
 
+  /**
+   * Creates the `memory/`, `workspace/`, and `archive/` subdirectories if
+   * they do not already exist.
+   *
+   * Called automatically by {@link createAgent} during initialisation.
+   */
   async ensureDirectories(): Promise<void> {
     await this.ensureDir(this.getMemoryPath());
     await this.ensureDir(this.getWorkspacePath());

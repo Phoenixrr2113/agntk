@@ -134,6 +134,19 @@ function getFreeTier(): ResolvedProvider {
   return result;
 }
 
+/**
+ * Auto-detects the best available LLM provider using a priority cascade:
+ *
+ * 1. **BYOK** – `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or `CEREBRAS_API_KEY`
+ *    is present in the environment.
+ * 2. **Ollama explicit** – `OLLAMA_ENABLED=true` is set.
+ * 3. **Ollama probe** – Ollama is reachable at `localhost:11434` (or
+ *    `OLLAMA_BASE_URL`) with at least one usable model installed.
+ * 4. **Free tier** – Falls back to the agntk proxy (`api.agntk.dev`).
+ *
+ * @returns A {@link ResolvedProvider} describing the chosen provider, its
+ *   detection source, and optional Ollama model recommendations.
+ */
 export async function resolveProvider(): Promise<ResolvedProvider> {
   _ollamaSkipReason = null;
 
@@ -152,6 +165,16 @@ export async function resolveProvider(): Promise<ResolvedProvider> {
 let cachedProvider: ResolvedProvider | null = null;
 let resolvePromise: Promise<ResolvedProvider> | null = null;
 
+/**
+ * Returns the resolved provider, running auto-detection exactly once and
+ * caching the result for all subsequent calls.
+ *
+ * Concurrent calls are deduplicated — only one detection run is ever
+ * in-flight at a time.  Call {@link resetProviderCache} to force
+ * re-detection.
+ *
+ * @returns The cached (or freshly resolved) {@link ResolvedProvider}.
+ */
 export async function getResolvedProvider(): Promise<ResolvedProvider> {
   if (cachedProvider) return cachedProvider;
   if (resolvePromise) return resolvePromise;
@@ -164,6 +187,13 @@ export async function getResolvedProvider(): Promise<ResolvedProvider> {
   return resolvePromise;
 }
 
+/**
+ * Clears the cached provider so the next call to {@link getResolvedProvider}
+ * runs auto-detection from scratch.
+ *
+ * Primarily useful in tests and CLI commands that need to re-evaluate the
+ * environment after changing env vars.
+ */
 export function resetProviderCache(): void {
   cachedProvider = null;
   resolvePromise = null;
