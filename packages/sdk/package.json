@@ -37,7 +37,7 @@
     "@agntk/logger": "workspace:*",
     "@agntk/search": "workspace:*",
     "@ai-sdk/openai-compatible": "^2.0.37",
-    "ai": "6.0.138",
+    "ai": "6.0.141",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
@@ -45,7 +45,7 @@
     "@agntk/config-typescript": "workspace:*",
     "@types/node": "^25.5.0",
     "typescript": "^5.7.3",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.2"
   },
   "peerDependencies": {
     "@opentelemetry/sdk-trace-node": "*",

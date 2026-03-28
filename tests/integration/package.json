@@ -15,9 +15,9 @@
     "@agntk/core": "workspace:*",
     "@agntk/server": "workspace:*",
     "@agntk/client": "workspace:*",
-    "ai": "6.0.138",
+    "ai": "6.0.141",
     "zod": "^4.3.6",
-    "vitest": "^4.1.1",
+    "vitest": "^4.1.2",
     "typescript": "^5.8.3"
   }
 }
