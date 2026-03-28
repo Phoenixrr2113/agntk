@@ -1,5 +1,11 @@
 # @agntk/logger
 
+## 1.2.7
+
+### Patch Changes
+
+- Improve CLI help output with an Environment Variables section, clearer option descriptions, and provider priority order documentation.
+
 ## 1.2.6
 
 ### Patch Changes

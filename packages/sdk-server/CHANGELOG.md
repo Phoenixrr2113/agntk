@@ -1,5 +1,14 @@
 # @agntk/server
 
+## 1.2.7
+
+### Patch Changes
+
+- Improve CLI help output with an Environment Variables section, clearer option descriptions, and provider priority order documentation.
+- Updated dependencies
+  - @agntk/core@1.2.7
+  - @agntk/logger@1.2.7
+
 ## 1.2.6
 
 ### Patch Changes
