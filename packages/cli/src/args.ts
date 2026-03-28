@@ -106,48 +106,59 @@ export function printHelp(): void {
   agntk (${version}) — zero-config AI agent
 
   Usage:
-    agntk "prompt"
-    agntk -n <name> "prompt"
-    agntk -n <name> -i
-    agntk list
+    agntk "prompt"                        One-shot prompt (exits when done)
+    agntk -n <name> "prompt"             Named agent with persistent memory
+    agntk -n <name> -i                   Interactive REPL with named agent
+    agntk <command> [arg]                Manage agents
 
   Options:
-    -n, --name <name>        Agent name (enables persistent memory)
-    --instructions <text>    What the agent does (injected as system prompt)
-    -i, --interactive        Interactive REPL mode
-    --workspace <path>       Workspace root (default: cwd)
-    --max-steps <n>          Max tool-loop steps (default: unlimited)
-    --verbose                Show full tool args and output
-    -q, --quiet              Text output only (for piping, no follow-up)
-    -v, --version            Show version
-    -h, --help               Show help
+    -n, --name <name>        Agent name — enables persistent memory across runs
+    --instructions <text>    System prompt override for what this agent does
+    -i, --interactive        Start interactive REPL (read-eval-print loop)
+    --workspace <path>       Working directory for file tools (default: cwd)
+    --max-steps <n>          Limit tool-loop iterations (default: unlimited)
+    --verbose                Print full tool arguments and raw output
+    -q, --quiet              Suppress all decorations — plain text only, no REPL
+    -v, --version            Print version and exit
+    -h, --help               Print this help and exit
 
-  After a one-shot prompt completes, you can type follow-up messages
-  without re-running the command. The agent remembers the conversation.
-  Use -q/--quiet to disable this and exit immediately.
+  After a one-shot prompt completes, agntk enters follow-up mode so you can
+  continue the conversation without re-running the command. The agent retains
+  the full message history. Use -q/--quiet to suppress this and exit immediately.
 
   Commands:
-    list                     List all known agents
-    info <name>              Show agent details (memory, workspace, tokens)
-    delete <name>            Delete an agent's state
-    stop <name>              Stop a running agent
-    clean                    Interactively remove stale agents
+    list                     List all known agents and their status
+    info <name>              Show agent details: memory, workspace, token usage
+    delete <name>            Permanently delete an agent and its memory
+    stop <name>              Send SIGTERM to a running agent process
+    clean                    Interactively prune stale or unused agents
 
   Examples:
     agntk "fix the failing tests"
-    agntk whats up
+    agntk "what does this codebase do" --verbose
     agntk -n coder "fix the failing tests"
     agntk -n ops --instructions "you manage k8s deploys" "roll back staging"
+    agntk -n coder --max-steps 20 "refactor auth module"
     agntk -n coder -i
     agntk list
     agntk info coder
     agntk delete old-agent
     agntk clean
-    cat error.log | agntk -n debugger "explain"
+    cat error.log | agntk -n debugger "explain this error"
 
-  Provider (auto-detected):
-    Works out of the box with the free tier (Cerebras).
-    For your own key:  export OPENROUTER_API_KEY=sk-or-...
-    For local models:  install Ollama (auto-detected at localhost:11434)
+  Environment Variables:
+    OPENROUTER_API_KEY       Use OpenRouter (access to 300+ models)
+    OPENAI_API_KEY           Use OpenAI directly (GPT-4o, o1, etc.)
+    CEREBRAS_API_KEY         Use Cerebras (fast inference)
+    OLLAMA_ENABLED=true      Force Ollama even if a cloud key is set
+    OLLAMA_BASE_URL          Ollama server URL (default: http://localhost:11434)
+    OLLAMA_FAST_MODEL        Override the fast-tier Ollama model name
+    OLLAMA_FULL_MODEL        Override the full-tier Ollama model name
+    DEBUG                    Enable verbose debug logging (any non-empty value)
+
+  Provider (auto-detected, in priority order):
+    1. OPENROUTER_API_KEY / OPENAI_API_KEY / CEREBRAS_API_KEY — your own key
+    2. Ollama running locally — auto-detected at localhost:11434
+    3. Built-in free tier (Cerebras) — rate-limited, no key required
 `);
 }
