@@ -1,5 +1,11 @@
 # @agntk/cli
 
+## 1.2.8
+
+### Patch Changes
+
+- chore: update @hono/node-server to 1.19.12; add comprehensive unit tests for parseCLIArgs covering all flags, commands, edge cases, and combined usage patterns
+
 ## 1.2.7
 
 ### Patch Changes

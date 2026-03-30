@@ -1,5 +1,12 @@
 # agntk
 
+## 1.2.8
+
+### Patch Changes
+
+- Updated dependencies
+  - @agntk/cli@1.2.8
+
 ## 1.2.7
 
 ### Patch Changes
