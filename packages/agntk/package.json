@@ -30,7 +30,16 @@
     "agent",
     "cli",
     "agntk",
-    "npx"
+    "npx",
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "llm",
+    "ollama",
+    "zero-config",
+    "developer-tools",
+    "typescript",
+    "ai-agent"
   ],
   "license": "MIT"
 }
