@@ -43,7 +43,7 @@ After a one-shot prompt completes, you can type follow-up messages without re-ru
 | `--instructions <text>` |       | Custom system prompt                        |
 | `--interactive`         | `-i`  | Interactive REPL mode                       |
 | `--workspace <path>`    |       | Workspace root (default: cwd)               |
-| `--max-steps <n>`       |       | Max tool-loop steps (default: unlimited)    |
+| `--max-steps <n>`       |       | Max tool-loop steps (default: 25)           |
 | `--verbose`             |       | Show full tool args and output              |
 | `--quiet`               | `-q`  | Text output only, no follow-up (for piping) |
 | `--version`             | `-v`  | Show version                                |
@@ -58,6 +58,45 @@ After a one-shot prompt completes, you can type follow-up messages without re-ru
 | `agntk delete <name>` | Delete an agent's state                        |
 | `agntk stop <name>`   | Stop a running agent                           |
 | `agntk clean`         | Interactively remove stale agents              |
+| `agntk completions`   | Output shell completion script (bash/zsh/fish) |
+
+### Interactive REPL
+
+In REPL mode (`-i` or follow-up after one-shot), type `/` and press TAB for command autocomplete:
+
+| Command    | Description                |
+| ---------- | -------------------------- |
+| `/help`    | Show available commands    |
+| `/tools`   | List available tools       |
+| `/agents`  | List all agents            |
+| `/model`   | Show current model info    |
+| `/memory`  | Show agent memory files    |
+| `/status`  | Show session stats         |
+| `/verbose` | Toggle verbose output      |
+| `/clear`   | Clear conversation history |
+| `/exit`    | Quit the REPL              |
+
+### Shell Completion
+
+When installed globally, shell completions auto-install on first run:
+
+```bash
+npm i -g @agntk/cli
+agntk --version  # triggers auto-install for your shell
+
+# Or generate manually:
+agntk completions bash  # bash
+agntk completions zsh   # zsh
+agntk completions fish  # fish
+```
+
+### Update Notifications
+
+agntk checks npm for newer versions in the background (cached for 24 hours). When an update is available, you'll see:
+
+```
+Update available: 1.2.8 -> 1.3.0 -- run npm i -g agntk
+```
 
 ## Provider Detection
 

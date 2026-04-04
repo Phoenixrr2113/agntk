@@ -83,6 +83,7 @@ agntk "prompt"                    Run a one-shot task
 agntk -n <name> "prompt"          Named agent (persistent memory)
 agntk -n <name> -i                Interactive REPL
 agntk list                        List all agents
+agntk completions <shell>         Output shell completion script
 ```
 
 | Flag             | Short | Description                                 |
@@ -96,6 +97,35 @@ agntk list                        List all agents
 | `--quiet`        | `-q`  | Text output only (no follow-up, for piping) |
 | `--version`      | `-v`  | Show version                                |
 | `--help`         | `-h`  | Show help                                   |
+
+### Interactive REPL
+
+In REPL mode (`-i` or follow-up after one-shot), press TAB after `/` for autocomplete:
+
+| Command    | Description                |
+| ---------- | -------------------------- |
+| `/help`    | Show available commands    |
+| `/tools`   | List available tools       |
+| `/agents`  | List all agents            |
+| `/model`   | Show current model info    |
+| `/memory`  | Show agent memory files    |
+| `/status`  | Show session stats         |
+| `/verbose` | Toggle verbose output      |
+| `/clear`   | Clear conversation history |
+| `/exit`    | Quit the REPL              |
+
+### Shell Completion
+
+Tab completion for commands, flags, and agent names in your shell:
+
+```bash
+# Install globally for shell completion
+npm i -g agntk
+
+# Completions auto-install on first run (bash/zsh/fish)
+# Or generate manually:
+agntk completions zsh
+```
 
 ### Examples
 
@@ -195,6 +225,7 @@ for await (const chunk of result.fullStream) {
 | `@agntk/cli`    | CLI implementation                                          |
 | `@agntk/server` | HTTP server — REST + SSE + WebSocket endpoints              |
 | `@agntk/client` | Client library — HTTP, SSE, WebSocket                       |
+| `@agntk/search` | Web search with provider fallback (DuckDuckGo, Brave, etc)  |
 | `@agntk/logger` | Structured logging with namespace filtering                 |
 
 ### Custom Tools

@@ -92,6 +92,7 @@ agntk info <name>                 Show agent details
 agntk delete <name>               Delete an agent's state
 agntk stop <name>                 Stop a running agent
 agntk clean                       Interactively remove stale agents
+agntk completions <shell>         Output shell completion script
 ```
 
 ### Options
@@ -102,7 +103,7 @@ agntk clean                       Interactively remove stale agents
 | `--instructions` |       | Custom system prompt                        |
 | `--interactive`  | `-i`  | Interactive REPL mode                       |
 | `--workspace`    |       | Workspace root (default: current directory) |
-| `--max-steps`    |       | Max tool-loop steps (default: unlimited)    |
+| `--max-steps`    |       | Max tool-loop steps (default: 25)           |
 | `--verbose`      |       | Show full tool args and output              |
 | `--quiet`        | `-q`  | Text output only (no follow-up, for piping) |
 | `--version`      | `-v`  | Show version                                |
@@ -117,6 +118,38 @@ agntk clean                       Interactively remove stale agents
 | `delete <name>` | Delete an agent's state directory (with confirmation)                       |
 | `stop <name>`   | Send SIGTERM to a running agent; SIGKILL if it doesn't exit                 |
 | `clean`         | Interactive picker to bulk-delete idle agents                               |
+| `completions`   | Output shell completion script (bash, zsh, fish)                            |
+
+### Interactive REPL
+
+In REPL mode (`-i` or follow-up after one-shot), press TAB after `/` for autocomplete:
+
+| Command    | Description                |
+| ---------- | -------------------------- |
+| `/help`    | Show available commands    |
+| `/tools`   | List available tools       |
+| `/agents`  | List all agents            |
+| `/model`   | Show current model info    |
+| `/memory`  | Show agent memory files    |
+| `/status`  | Show session stats         |
+| `/verbose` | Toggle verbose output      |
+| `/clear`   | Clear conversation history |
+| `/exit`    | Quit the REPL              |
+
+### Shell Completion
+
+Tab completion for commands, flags, and agent names in your shell:
+
+```bash
+# Install globally for shell completion
+npm i -g agntk
+
+# Completions auto-install on first run (bash/zsh/fish)
+# Or generate manually:
+agntk completions zsh
+```
+
+When installed globally, agntk auto-detects your shell, writes the completion script to `~/.agntk/completions/`, and patches your rc file. No manual setup needed.
 
 ### Examples
 
@@ -221,6 +254,7 @@ for await (const chunk of result.fullStream) {
 | `@agntk/cli`    | CLI implementation                                          |
 | `@agntk/server` | HTTP server — REST + SSE + WebSocket endpoints              |
 | `@agntk/client` | Client library — HTTP, SSE, WebSocket                       |
+| `@agntk/search` | Web search with provider fallback (DuckDuckGo, Brave, etc)  |
 | `@agntk/logger` | Structured logging with namespace filtering                 |
 
 ### Custom Tools
