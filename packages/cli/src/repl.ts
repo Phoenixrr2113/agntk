@@ -6,6 +6,7 @@ import { createColors } from './ui';
 import { setupLockCleanup } from './agents';
 import { consumeStream, createSubAgentRenderer } from './stream';
 import { getVersion } from './version';
+import { createCompleter, getCommand, type CommandContext } from './commands';
 import type { CLIArgs } from './args';
 import type { Agent } from '@agntk/core';
 
@@ -66,11 +67,13 @@ export async function runRepl(args: CLIArgs, opts?: ReplOptions): Promise<void> 
     output.write(`${colors.dim('Type /help for commands, /exit or Ctrl+C to quit.')}\n\n`);
   }
 
+  const completer = createCompleter();
   const rl: Interface = createInterface({
     input: process.stdin,
     output: process.stdout,
     prompt: `${colors.cyan(colors.bold(args.name! + ' ❯'))} `,
     terminal: true,
+    completer,
   });
 
   const history: Array<{ role: 'user' | 'assistant'; content: string }> = [
@@ -82,31 +85,23 @@ export async function runRepl(args: CLIArgs, opts?: ReplOptions): Promise<void> 
   let closed = false;
 
   async function processLine(trimmed: string): Promise<void> {
-    if (trimmed === '/exit' || trimmed === '/quit') {
-      rl.close();
-      return;
-    }
-    if (trimmed === '/help') {
-      output.write(
-        `\n  ${colors.bold('/help')}    Show commands\n  ${colors.bold('/tools')}   List available tools\n  ${colors.bold('/verbose')} Toggle verbose output\n  ${colors.bold('/exit')}    Quit\n\n`,
-      );
-      rl.prompt();
-      return;
-    }
-    if (trimmed === '/tools') {
-      const tools = agent.getToolNames();
-      output.write(`\n${colors.bold(`Tools (${tools.length})`)}:\n  ${tools.join(', ')}\n\n`);
-      rl.prompt();
-      return;
-    }
-    if (trimmed === '/verbose') {
-      if (args.outputLevel === 'verbose') {
-        args.outputLevel = 'normal';
-        output.write(`${colors.dim('Verbose output: off')}\n`);
-      } else {
-        args.outputLevel = 'verbose';
-        output.write(`${colors.dim('Verbose output: on')}\n`);
+    if (trimmed.startsWith('/')) {
+      const spaceIdx = trimmed.indexOf(' ');
+      const cmdName = spaceIdx === -1 ? trimmed.slice(1) : trimmed.slice(1, spaceIdx);
+      const cmd = getCommand(cmdName);
+
+      if (cmd) {
+        const ctx: CommandContext = { agent, args, colors, output, history, rl };
+        await cmd.execute(ctx);
+        if (cmdName !== 'exit' && cmdName !== 'quit') {
+          rl.prompt();
+        }
+        return;
       }
+
+      output.write(
+        `${colors.dim(`Unknown command: ${trimmed}. Type /help for available commands.`)}\n`,
+      );
       rl.prompt();
       return;
     }

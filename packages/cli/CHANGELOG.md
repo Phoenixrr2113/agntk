@@ -1,5 +1,16 @@
 # @agntk/cli
 
+## 1.3.0
+
+### Minor Changes
+
+- feat: slash command registry, REPL autocomplete, shell completions, and update checker
+  - Slash command registry with TAB completion in the REPL (works on first run, zero setup)
+  - 10 built-in slash commands: /help, /tools, /verbose, /exit, /quit, /agents, /memory, /model, /clear, /status
+  - Shell completion scripts for bash, zsh, and fish (agntk completions <shell>)
+  - Auto-install shell completions when agntk is globally installed
+  - Update checker that notifies when a newer version is available on npm
+
 ## 1.2.8
 
 ### Patch Changes

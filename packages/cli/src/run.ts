@@ -7,6 +7,8 @@ import { readStdin } from './stream';
 import { createColors } from './ui';
 import { getVersion } from './version';
 import { loadDotenvFallback } from './config';
+import { ensureCompletions } from './setup-completions';
+import { checkForUpdate } from './update-check';
 
 const USAGE_HINT =
   'Usage: agntk "your prompt"\n' +
@@ -16,6 +18,7 @@ const USAGE_HINT =
   '       agntk -h';
 
 export async function main(): Promise<void> {
+  ensureCompletions();
   const args = parseCLIArgs(process.argv.slice(2));
 
   if (args.version) {
@@ -57,6 +60,21 @@ export async function main(): Promise<void> {
       case 'clean':
         await cleanAgents();
         break;
+      case 'completions': {
+        const shell = args.commandArg;
+        if (!shell || !['bash', 'zsh', 'fish'].includes(shell)) {
+          console.error('Usage: agntk completions bash|zsh|fish');
+          console.error('');
+          console.error('  Add to your shell config:');
+          console.error('    Bash:  eval "$(agntk completions bash)"');
+          console.error('    Zsh:   eval "$(agntk completions zsh)"');
+          console.error('    Fish:  agntk completions fish | source');
+          process.exit(1);
+        }
+        const { generateCompletionScript } = await import('./completions.js');
+        process.stdout.write(generateCompletionScript(shell as 'bash' | 'zsh' | 'fish'));
+        break;
+      }
     }
     process.exit(0);
   }
@@ -92,6 +110,11 @@ export async function main(): Promise<void> {
 
       if (resolvedProvider.ollamaSkipReason) {
         process.stderr.write(`  ${colors.yellow('note:')} ${resolvedProvider.ollamaSkipReason}\n`);
+      }
+
+      const updateMsg = checkForUpdate();
+      if (updateMsg) {
+        process.stderr.write(`  ${colors.yellow(updateMsg)}\n`);
       }
     }
   }

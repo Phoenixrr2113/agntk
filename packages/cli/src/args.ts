@@ -2,7 +2,7 @@ import { getVersion } from './version';
 
 export type OutputLevel = 'quiet' | 'normal' | 'verbose';
 
-export type CLICommand = 'list' | 'info' | 'delete' | 'stop' | 'clean';
+export type CLICommand = 'list' | 'info' | 'delete' | 'stop' | 'clean' | 'completions';
 
 export interface CLIArgs {
   name: string | null;
@@ -18,8 +18,33 @@ export interface CLIArgs {
   commandArg: string | null;
 }
 
-const COMMANDS = new Set<CLICommand>(['list', 'info', 'delete', 'stop', 'clean']);
+export const CLI_COMMANDS = ['list', 'info', 'delete', 'stop', 'clean', 'completions'] as const;
 
+export const CLI_FLAGS = [
+  '-n',
+  '--name',
+  '--instructions',
+  '-i',
+  '--interactive',
+  '--workspace',
+  '--verbose',
+  '-q',
+  '--quiet',
+  '--max-steps',
+  '-h',
+  '--help',
+  '-v',
+  '--version',
+] as const;
+
+export const COMMANDS_WITH_AGENT_ARG = ['info', 'delete', 'stop'] as const;
+
+const COMMANDS = new Set<CLICommand>(CLI_COMMANDS);
+
+/**
+ *
+ * @param argv
+ */
 export function parseCLIArgs(argv: string[]): CLIArgs {
   const args: CLIArgs = {
     name: null,
@@ -100,6 +125,9 @@ export function parseCLIArgs(argv: string[]): CLIArgs {
   return args;
 }
 
+/**
+ *
+ */
 export function printHelp(): void {
   const version = getVersion();
   console.log(`
@@ -132,6 +160,7 @@ export function printHelp(): void {
     delete <name>            Permanently delete an agent and its memory
     stop <name>              Send SIGTERM to a running agent process
     clean                    Interactively prune stale or unused agents
+    completions <shell>      Output shell completion script (bash, zsh, fish)
 
   Examples:
     agntk "fix the failing tests"
