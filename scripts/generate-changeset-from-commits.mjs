@@ -45,7 +45,7 @@ const packageMap = {
   'packages/sdk-server/': '@agntk/server',
   'packages/sdk-client/': '@agntk/client',
   'packages/logger/': '@agntk/logger',
-  'packages/brain/': '@agntk/brain',
+  'packages/search/': '@agntk/search',
   'packages/config-typescript/': '@agntk/config-typescript',
   'packages/config-eslint/': '@agntk/config-eslint',
 };
@@ -120,11 +120,6 @@ function detectAffectedPackages(files) {
         break;
       }
     }
-  }
-
-  // If no specific package matched, include all linked packages
-  if (packages.size === 0) {
-    return Object.values(packageMap);
   }
 
   return Array.from(packages);
