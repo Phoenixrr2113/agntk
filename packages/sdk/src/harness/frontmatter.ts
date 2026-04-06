@@ -4,6 +4,20 @@ const FRONTMATTER_REGEX = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
 const L0_REGEX = /<!--\s*L0:\s*(.*?)\s*-->/;
 const L1_REGEX = /<!--\s*L1:\s*([\s\S]*?)\s*-->/;
 
+export function parseRawFrontmatter(content: string): Record<string, string> {
+  const fmMatch = content.match(FRONTMATTER_REGEX);
+  if (!fmMatch) return {};
+
+  const fields: Record<string, string> = {};
+  for (const line of fmMatch[1].split('\n')) {
+    const kvMatch = line.match(/^\s*([a-zA-Z_-]+)\s*:\s*(.+?)\s*$/);
+    if (kvMatch) {
+      fields[kvMatch[1].toLowerCase()] = kvMatch[2].replace(/^['"]|['"]$/g, '');
+    }
+  }
+  return fields;
+}
+
 function parseYamlList(value: string): string[] {
   const bracketMatch = value.match(/^\[(.+)\]$/);
   const inner = bracketMatch ? bracketMatch[1] : value;

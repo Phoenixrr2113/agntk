@@ -22,3 +22,6 @@ export type { JournalEntry, InstinctCandidate, KnowledgeUpdate, SynthesizeJourna
 export { synthesizeJournal } from './journal';
 
 export { buildIndex, rebuildAllIndexes } from './index-builder';
+
+export type { ScheduledWorkflow, SchedulerConfig, Scheduler } from './scheduler';
+export { createScheduler, parseCron, matchesCron } from './scheduler';
