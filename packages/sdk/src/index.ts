@@ -56,4 +56,5 @@ export type {
   ParsedHarnessDocument,
   HarnessConfig,
 } from './harness';
-export { parseFrontmatter } from './harness';
+export { parseFrontmatter, createGovernanceLoader } from './harness';
+export type { GovernanceLoader } from './harness';
