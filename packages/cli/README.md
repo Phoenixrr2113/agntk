@@ -59,6 +59,9 @@ After a one-shot prompt completes, you can type follow-up messages without re-ru
 | `agntk stop <name>`   | Stop a running agent                           |
 | `agntk clean`         | Interactively remove stale agents              |
 | `agntk completions`   | Output shell completion script (bash/zsh/fish) |
+| `agntk install <file>`   | Validate and install a capability into the harness |
+| `agntk uninstall <path>` | Remove an installed capability |
+| `agntk evaluate <file>`  | Validate a capability file without installing |
 
 ### Interactive REPL
 
@@ -97,6 +100,26 @@ agntk checks npm for newer versions in the background (cached for 24 hours). Whe
 ```
 Update available: 1.2.8 -> 1.3.0 -- run npm i -g agntk
 ```
+
+### Harness Management
+
+Install, validate, and remove governance capabilities (rules, instincts, skills, workflows):
+
+```bash
+# Validate a capability file
+agntk evaluate my-rule.md
+
+# Install into the default agent's harness
+agntk install my-rule.md
+
+# Install into a named agent's harness
+agntk -n coder install learned-pattern.md
+
+# Remove an installed capability
+agntk uninstall ~/.agntk/agents/coder/harness/rules/my-rule.md
+```
+
+The installer auto-detects the capability type (rule, instinct, skill, workflow) and places the file in the correct directory.
 
 ## Provider Detection
 

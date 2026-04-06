@@ -65,6 +65,7 @@ interface AgentStreamResult {
 | `usageLimits`        | `UsageLimits`             | None            | Token and request caps                                     |
 | `tools`              | `Record<string, Tool>`    | `{}`            | Custom tools (merged with built-in tools)                  |
 | `onSubAgentActivity` | `SubAgentActivityHandler` | None            | Callback for live sub-agent stream chunks                  |
+| `harness`            | `HarnessConfig`           | None            | Enable governance (CORE, rules, instincts, instinct tool)  |
 
 ## Built-in Tools
 
@@ -189,6 +190,108 @@ const agent = createAgent({ name: 'my-agent' });
 // Manual:
 const skills = await discoverSkills('./.agents/skills');
 const prompt = buildSkillsSystemPrompt(skills);
+```
+
+## Harness Governance
+
+Three-tier behavioral governance loaded into the agent's system prompt:
+
+```typescript
+import { createAgent } from '@agntk/core';
+
+const agent = createAgent({
+  name: 'governed-agent',
+  harness: {
+    root: './harness',     // directory containing core.md, rules/, instincts/
+    core: true,            // load CORE identity (default: true)
+    rules: true,           // load human-authored rules (default: true)
+    instincts: true,       // load agent-learned instincts + register create_instinct tool
+  },
+});
+```
+
+### Harness file format
+
+All harness files use YAML frontmatter with L0/L1 level comments:
+
+```markdown
+---
+id: safety-001
+tags: [safety, filesystem]
+author: human
+status: active
+---
+<!-- L0: Filesystem safety rule -->
+<!-- L1: Prevents modification of system-critical paths -->
+Do not modify files in /etc, /System, or /usr.
+```
+
+### Event logging and journals
+
+```typescript
+import { createEventLogger, synthesizeJournal } from '@agntk/core';
+
+const logger = createEventLogger('./events');
+logger.log({ source: 'agent', type: 'decision', summary: 'Chose REST', details: {} });
+
+// Synthesize daily journal from events (requires LLM)
+const entry = await synthesizeJournal('2025-06-15', {
+  eventLogger: logger,
+  model: myModel,
+  journalDir: './journal',
+});
+```
+
+### Capability management
+
+```typescript
+import { evaluateCapability, installCapability } from '@agntk/core';
+
+const report = await evaluateCapability('./my-rule.md');
+if (report.passed) {
+  await installCapability('./my-rule.md', './harness');
+}
+```
+
+### Token-budgeted memory loading
+
+```typescript
+import { loadMemoryContextWithBudget } from '@agntk/core';
+
+const context = await loadMemoryContextWithBudget(memoryStore, {
+  tokenBudget: 4000,
+  taskHint: 'api security',
+  alwaysLoadFull: ['critical-notes.md'],
+});
+```
+
+### Event pipeline
+
+```typescript
+import { createGateway, createPipeline, createEventLogger, BaseAdapter } from '@agntk/core';
+
+const gateway = createGateway('forward');
+gateway.addRule({ name: 'drop-noise', match: (e) => e.type === 'system', action: 'drop' });
+
+const pipeline = createPipeline({
+  gateway,
+  eventLogger: createEventLogger('./events'),
+  onForward: async (event) => { /* handle event */ },
+});
+```
+
+### Workflow scheduler
+
+```typescript
+import { createScheduler } from '@agntk/core';
+
+const scheduler = createScheduler({
+  harnessRoot: './harness',
+  onFire: async (workflow) => { /* execute workflow */ },
+  quietHoursStart: 22,
+  quietHoursEnd: 7,
+});
+await scheduler.start();
 ```
 
 ## License

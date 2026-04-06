@@ -55,6 +55,8 @@ Out of the box, every agent has 20+ built-in tools:
 - **Memory** — remember facts, recall context, build knowledge across sessions
 - **Sub-agents** — spawn specialized agents for parallel work, with live activity streaming
 - **Skills** — auto-discover `SKILL.md` files for project-specific capabilities
+- **Governance** — three-tier behavioral framework (CORE identity > human rules > agent instincts)
+- **Growth loop** — agents log events, synthesize daily journals, and create learned instincts
 
 ---
 
@@ -93,6 +95,9 @@ agntk delete <name>               Delete an agent's state
 agntk stop <name>                 Stop a running agent
 agntk clean                       Interactively remove stale agents
 agntk completions <shell>         Output shell completion script
+agntk install <file.md>           Install a capability into the agent's harness
+agntk uninstall <path>            Remove an installed capability
+agntk evaluate <file.md>          Validate a capability file
 ```
 
 ### Options
@@ -119,6 +124,9 @@ agntk completions <shell>         Output shell completion script
 | `stop <name>`   | Send SIGTERM to a running agent; SIGKILL if it doesn't exit                 |
 | `clean`         | Interactive picker to bulk-delete idle agents                               |
 | `completions`   | Output shell completion script (bash, zsh, fish)                            |
+| `install`       | Validate and install a capability (rule, instinct, skill) into the harness  |
+| `uninstall`     | Remove an installed capability file                                         |
+| `evaluate`      | Validate a capability file without installing it                            |
 
 ### Interactive REPL
 
@@ -221,6 +229,37 @@ Apple Silicon unified memory, NVIDIA VRAM, and CPU-only systems are all detected
 ```
   provider: ollama (http://localhost:11434)
   models:   32 GB RAM → qwen3:32b for reasoning/powerful, qwen3:14b for standard
+```
+
+---
+
+## Harness Governance
+
+Agents can operate under a three-tier governance system that defines behavioral boundaries:
+
+| Tier | Directory | Author | Purpose |
+|------|-----------|--------|---------|
+| **CORE** | `core.md` | Human | Frozen identity — purpose, values, ethics |
+| **Rules** | `rules/` | Human | Behavioral boundaries the agent must follow |
+| **Instincts** | `instincts/` | Agent | Learned behaviors from experience (draft by default) |
+
+Enable governance on any agent:
+
+```typescript
+const agent = createAgent({
+  name: 'governed-agent',
+  harness: { root: './harness' },
+});
+```
+
+The agent automatically gets a `create_instinct` tool to persist learned behaviors. Events are logged for daily journal synthesis, closing the growth loop.
+
+```bash
+# Install a capability file
+agntk -n myagent install rules/safety.md
+
+# Validate before installing
+agntk evaluate my-instinct.md
 ```
 
 ---
