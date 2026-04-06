@@ -34,3 +34,9 @@ export { createGateway } from './gateway';
 
 export type { PipelineHandler, PipelineConfig, Pipeline } from './pipeline';
 export { createPipeline } from './pipeline';
+
+export type { CapabilityType, EvalStep, EvalStepStatus, EvalReport } from './evaluator';
+export { evaluateCapability } from './evaluator';
+
+export type { InstallResult } from './installer';
+export { installCapability, uninstallCapability } from './installer';
