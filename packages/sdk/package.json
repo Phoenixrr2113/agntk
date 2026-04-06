@@ -37,15 +37,15 @@
   "dependencies": {
     "@agntk/logger": "workspace:*",
     "@agntk/search": "workspace:*",
-    "@ai-sdk/openai-compatible": "^2.0.37",
-    "ai": "6.0.141",
+    "@ai-sdk/openai-compatible": "^2.0.40",
+    "ai": "6.0.149",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
-    "@types/node": "^25.5.0",
-    "typescript": "^5.7.3",
+    "@types/node": "^25.5.2",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   },
   "peerDependencies": {

@@ -25,13 +25,13 @@
   },
   "dependencies": {
     "@agntk/core": "workspace:*",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.4.1"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
-    "@types/node": "^25.5.0",
-    "ai": "6.0.141",
-    "typescript": "^5.7.3",
+    "@types/node": "^25.5.2",
+    "ai": "6.0.149",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   },
   "files": [
