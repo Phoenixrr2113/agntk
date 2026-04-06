@@ -56,5 +56,5 @@ export type {
   ParsedHarnessDocument,
   HarnessConfig,
 } from './harness';
-export { parseFrontmatter, createGovernanceLoader } from './harness';
-export type { GovernanceLoader } from './harness';
+export { parseFrontmatter, createGovernanceLoader, createEventLogger } from './harness';
+export type { GovernanceLoader, AgentEvent, AgentEventType, AgentEventOutcome, EventLogger } from './harness';
