@@ -2,7 +2,7 @@ import { getVersion } from './version';
 
 export type OutputLevel = 'quiet' | 'normal' | 'verbose';
 
-export type CLICommand = 'list' | 'info' | 'delete' | 'stop' | 'clean' | 'completions';
+export type CLICommand = 'list' | 'info' | 'delete' | 'stop' | 'clean' | 'completions' | 'install' | 'uninstall' | 'evaluate';
 
 export interface CLIArgs {
   name: string | null;
@@ -18,7 +18,7 @@ export interface CLIArgs {
   commandArg: string | null;
 }
 
-export const CLI_COMMANDS = ['list', 'info', 'delete', 'stop', 'clean', 'completions'] as const;
+export const CLI_COMMANDS = ['list', 'info', 'delete', 'stop', 'clean', 'completions', 'install', 'uninstall', 'evaluate'] as const;
 
 export const CLI_FLAGS = [
   '-n',
@@ -161,6 +161,9 @@ export function printHelp(): void {
     stop <name>              Send SIGTERM to a running agent process
     clean                    Interactively prune stale or unused agents
     completions <shell>      Output shell completion script (bash, zsh, fish)
+    install <file.md>        Install a capability file into the agent's harness
+    uninstall <path>         Remove an installed capability
+    evaluate <file.md>       Validate a capability file without installing
 
   Examples:
     agntk "fix the failing tests"

@@ -59,3 +59,5 @@ export type {
 } from './harness';
 export { parseFrontmatter, createGovernanceLoader, createEventLogger } from './harness';
 export type { GovernanceLoader, AgentEvent, AgentEventType, AgentEventOutcome, EventLogger } from './harness';
+export { evaluateCapability, installCapability, uninstallCapability } from './harness';
+export type { EvalReport, CapabilityType, InstallResult } from './harness';

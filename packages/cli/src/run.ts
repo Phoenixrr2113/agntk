@@ -75,6 +75,69 @@ export async function main(): Promise<void> {
         process.stdout.write(generateCompletionScript(shell as 'bash' | 'zsh' | 'fish'));
         break;
       }
+      case 'install': {
+        if (!args.commandArg) {
+          console.error('Usage: agntk install <file.md>');
+          process.exit(1);
+        }
+        const { resolve } = await import('node:path');
+        const { installCapability } = await import('@agntk/core');
+        const filePath = resolve(args.commandArg);
+        const agentName = args.name ?? 'default';
+        const { resolveAgentStatePath } = await import('@agntk/core');
+        const harnessRoot = resolve(resolveAgentStatePath(agentName), 'harness');
+        const result = await installCapability(filePath, harnessRoot);
+        if (result.success) {
+          console.log(`Installed to: ${result.installedPath}`);
+          console.log(`Type: ${result.report.detectedType}`);
+        } else {
+          console.error(`Install failed: ${result.error}`);
+          if (result.report.suggestions.length > 0) {
+            console.error('Suggestions:');
+            for (const s of result.report.suggestions) console.error(`  - ${s}`);
+          }
+          process.exit(1);
+        }
+        break;
+      }
+      case 'uninstall': {
+        if (!args.commandArg) {
+          console.error('Usage: agntk uninstall <file-path>');
+          process.exit(1);
+        }
+        const { resolve: resolvePath } = await import('node:path');
+        const { uninstallCapability } = await import('@agntk/core');
+        const result = await uninstallCapability(resolvePath(args.commandArg));
+        if (result.success) {
+          console.log('Uninstalled successfully.');
+        } else {
+          console.error(`Uninstall failed: ${result.error}`);
+          process.exit(1);
+        }
+        break;
+      }
+      case 'evaluate': {
+        if (!args.commandArg) {
+          console.error('Usage: agntk evaluate <file.md>');
+          process.exit(1);
+        }
+        const { resolve: resolveEvalPath } = await import('node:path');
+        const { evaluateCapability } = await import('@agntk/core');
+        const report = await evaluateCapability(resolveEvalPath(args.commandArg));
+        console.log(`File: ${report.path}`);
+        console.log(`Type: ${report.detectedType}`);
+        console.log(`Pass: ${report.passed}`);
+        for (const step of report.steps) {
+          const icon = step.status === 'pass' ? 'ok' : step.status === 'warn' ? '!!' : 'XX';
+          console.log(`  [${icon}] ${step.name}: ${step.message}`);
+        }
+        if (report.suggestions.length > 0) {
+          console.log('Suggestions:');
+          for (const s of report.suggestions) console.log(`  - ${s}`);
+        }
+        if (!report.passed) process.exit(1);
+        break;
+      }
     }
     process.exit(0);
   }
