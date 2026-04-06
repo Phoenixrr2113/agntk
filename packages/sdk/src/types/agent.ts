@@ -2,6 +2,7 @@ import type { LanguageModel, LanguageModelUsage, Tool } from 'ai';
 import type { UsageLimits } from '../usage-limits';
 import type { ApprovalConfig } from '../tools/approval';
 import type { SubAgentActivityHandler } from '../tools/spawn-agent';
+import type { HarnessConfig } from '../harness/types';
 
 export interface AgentOptions {
   name: string;
@@ -21,6 +22,8 @@ export interface AgentOptions {
   approval?: boolean | ApprovalConfig;
 
   onSubAgentActivity?: SubAgentActivityHandler;
+
+  harness?: HarnessConfig;
 }
 
 export interface Agent {

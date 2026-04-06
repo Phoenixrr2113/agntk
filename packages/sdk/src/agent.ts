@@ -33,6 +33,7 @@ import { MarkdownMemoryStore } from './memory/store';
 import { loadMemoryContext } from './memory/loader';
 import { initObservability, createTelemetrySettings } from './observability';
 import { buildDynamicSystemPrompt } from './prompts/context';
+import { createGovernanceLoader } from './harness/governance';
 
 const log = createLogger('@agntk/core:agent');
 
@@ -354,6 +355,22 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
           agentLog.warn('Memory context loading failed', {
             error: err instanceof Error ? err.message : String(err),
           });
+        }
+
+        if (options.harness) {
+          try {
+            const harnessRoot = options.harness.root ?? join(agentStatePath, 'harness');
+            const loader = createGovernanceLoader(harnessRoot);
+            const governancePrompt = await loader.buildGovernancePrompt();
+            if (governancePrompt) {
+              augmentedSystemPrompt = augmentedSystemPrompt + '\n' + governancePrompt;
+              agentLog.debug('Governance prompt injected', { chars: governancePrompt.length });
+            }
+          } catch (err) {
+            agentLog.warn('Governance loading failed', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
         }
 
         try {
