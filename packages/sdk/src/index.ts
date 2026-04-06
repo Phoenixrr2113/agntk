@@ -47,3 +47,13 @@ export type { MarkdownMemoryStoreOptions } from './memory/store';
 export { loadMemoryContext } from './memory/loader';
 
 export { shutdownObservability } from './observability';
+
+export type {
+  HarnessFrontmatter,
+  CoreIdentity,
+  Rule,
+  Instinct,
+  ParsedHarnessDocument,
+  HarnessConfig,
+} from './harness';
+export { parseFrontmatter } from './harness';
