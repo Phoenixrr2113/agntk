@@ -43,13 +43,13 @@ describe('ChatClient - Resumable Streams', () => {
       });
 
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-123', lastEventId: 'wf-123:1' } as StreamMetadata),
+        get: () => ({ workflowRunId: 'wf-123', lastEventId: 'wf-123:1' }) as StreamMetadata,
         configurable: true,
       });
 
       await chatClient.stream(
         { messages: [{ role: 'user', content: 'Hi' }] },
-        { onTextDelta: () => {} }
+        { onTextDelta: () => {} },
       );
 
       expect(chatClient.lastStreamMetadata?.workflowRunId).toBe('wf-123');
@@ -75,7 +75,8 @@ describe('ChatClient - Resumable Streams', () => {
 
       // Make metadata available with a workflowRunId
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-reconnect', lastEventId: 'wf-reconnect:0' } as StreamMetadata),
+        get: () =>
+          ({ workflowRunId: 'wf-reconnect', lastEventId: 'wf-reconnect:0' }) as StreamMetadata,
         configurable: true,
       });
 
@@ -87,7 +88,7 @@ describe('ChatClient - Resumable Streams', () => {
         {
           onTextDelta: (text) => textChunks.push(text),
           onReconnect: (attempt, runId) => reconnects.push({ attempt, runId }),
-        }
+        },
       );
 
       expect(callCount).toBe(2);
@@ -115,7 +116,7 @@ describe('ChatClient - Resumable Streams', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onError: (error) => errors.push(error),
-        }
+        },
       );
 
       expect(errors).toEqual(['Connection lost']);
@@ -128,11 +129,12 @@ describe('ChatClient - Resumable Streams', () => {
 
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
         callCount++;
+        yield* [];
         throw new Error(`Failure ${callCount}`);
       });
 
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-fail', lastEventId: undefined } as StreamMetadata),
+        get: () => ({ workflowRunId: 'wf-fail', lastEventId: undefined }) as StreamMetadata,
         configurable: true,
       });
 
@@ -144,7 +146,7 @@ describe('ChatClient - Resumable Streams', () => {
         {
           onError: (error) => errors.push(error),
           onReconnect: (attempt) => reconnects.push(attempt),
-        }
+        },
       );
 
       // Max attempts is 3, so we should see 3 reconnect calls + 1 final error
@@ -155,12 +157,13 @@ describe('ChatClient - Resumable Streams', () => {
 
     it('should NOT reconnect on abort signal', async () => {
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
+        yield* [];
         const error = new DOMException('The operation was aborted', 'AbortError');
         throw error;
       });
 
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-abort', lastEventId: undefined } as StreamMetadata),
+        get: () => ({ workflowRunId: 'wf-abort', lastEventId: undefined }) as StreamMetadata,
         configurable: true,
       });
 
@@ -170,7 +173,7 @@ describe('ChatClient - Resumable Streams', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onError: (error) => errors.push(error),
-        }
+        },
       );
 
       // Should not reconnect on abort
@@ -190,7 +193,11 @@ describe('ChatClient - Resumable Streams', () => {
       });
 
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-pass-headers', lastEventId: 'wf-pass-headers:5' } as StreamMetadata),
+        get: () =>
+          ({
+            workflowRunId: 'wf-pass-headers',
+            lastEventId: 'wf-pass-headers:5',
+          }) as StreamMetadata,
         configurable: true,
       });
 
@@ -198,7 +205,7 @@ describe('ChatClient - Resumable Streams', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onReconnect: () => {},
-        }
+        },
       );
 
       // Verify the second call includes the reconnection options
@@ -215,11 +222,12 @@ describe('ChatClient - Resumable Streams', () => {
       });
 
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
+        yield* [];
         throw new Error('disconnect');
       });
 
       Object.defineProperty(mockHttpClient, 'lastStreamMetadata', {
-        get: () => ({ workflowRunId: 'wf-disabled', lastEventId: undefined } as StreamMetadata),
+        get: () => ({ workflowRunId: 'wf-disabled', lastEventId: undefined }) as StreamMetadata,
         configurable: true,
       });
 
@@ -229,7 +237,7 @@ describe('ChatClient - Resumable Streams', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onError: (error) => errors.push(error),
-        }
+        },
       );
 
       expect(vi.mocked(mockHttpClient.generateStream)).toHaveBeenCalledTimes(1);

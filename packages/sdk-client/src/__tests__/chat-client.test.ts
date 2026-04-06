@@ -24,7 +24,11 @@ describe('ChatClient', () => {
       const events: StreamEvent[] = [
         { type: 'text-delta', textDelta: 'Hello' },
         { type: 'text-delta', textDelta: ' World' },
-        { type: 'finish', text: 'Hello World', usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 } },
+        {
+          type: 'finish',
+          text: 'Hello World',
+          usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 },
+        },
       ];
 
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
@@ -40,8 +44,10 @@ describe('ChatClient', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onTextDelta: (text) => textChunks.push(text),
-          onComplete: (result) => { completeResult = result; },
-        }
+          onComplete: (result) => {
+            completeResult = result;
+          },
+        },
       );
 
       expect(textChunks).toEqual(['Hello', ' World']);
@@ -69,7 +75,7 @@ describe('ChatClient', () => {
         {
           onToolCall: (id, name, args) => toolCalls.push({ id, name, args }),
           onToolResult: (id, name, result) => toolResults.push({ id, name, result }),
-        }
+        },
       );
 
       expect(toolCalls).toHaveLength(1);
@@ -100,7 +106,7 @@ describe('ChatClient', () => {
         {
           onStepStart: (index) => stepStarts.push(index),
           onStepFinish: (index, reason) => stepFinishes.push({ index, reason }),
-        }
+        },
       );
 
       expect(stepStarts).toEqual([0]);
@@ -108,9 +114,7 @@ describe('ChatClient', () => {
     });
 
     it('should dispatch error events', async () => {
-      const events: StreamEvent[] = [
-        { type: 'error', error: 'Something went wrong' },
-      ];
+      const events: StreamEvent[] = [{ type: 'error', error: 'Something went wrong' }];
 
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
         for (const event of events) {
@@ -124,7 +128,7 @@ describe('ChatClient', () => {
         { messages: [{ role: 'user', content: 'Fail' }] },
         {
           onError: (error) => errors.push(error),
-        }
+        },
       );
 
       expect(errors).toEqual(['Something went wrong']);
@@ -132,6 +136,7 @@ describe('ChatClient', () => {
 
     it('should call onError when generator throws', async () => {
       vi.mocked(mockHttpClient.generateStream).mockImplementation(async function* () {
+        yield* [];
         throw new Error('Network error');
       });
 
@@ -141,7 +146,7 @@ describe('ChatClient', () => {
         { messages: [{ role: 'user', content: 'Hi' }] },
         {
           onError: (error) => errors.push(error),
-        }
+        },
       );
 
       expect(errors).toEqual(['Network error']);

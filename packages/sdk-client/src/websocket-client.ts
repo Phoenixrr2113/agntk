@@ -30,7 +30,7 @@ export class AgentWebSocketClient {
   private config: WebSocketClientConfig;
   private state: ConnectionState = 'disconnected';
   private reconnectAttempts = 0;
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private onStateChange?: (state: ConnectionState) => void;
 
   constructor(config: WebSocketClientConfig) {
@@ -38,7 +38,7 @@ export class AgentWebSocketClient {
       reconnect: true,
       reconnectInterval: 1000,
       maxReconnectAttempts: 5,
-      ...config
+      ...config,
     };
     log.debug('Created WebSocket client', { url: config.url });
   }
@@ -61,14 +61,14 @@ export class AgentWebSocketClient {
 
   connect(): Promise<void> {
     if (this.state === 'connected') return Promise.resolve();
-    
+
     this.setState('connecting');
     log.debug('Connecting');
-    
+
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.config.url);
-        
+
         this.ws.onopen = () => {
           log.info('Connected');
           this.setState('connected');
@@ -90,7 +90,7 @@ export class AgentWebSocketClient {
             reject(new WebSocketError('Connection failed'));
           }
         };
-      } catch (error) {
+      } catch {
         this.setState('disconnected');
         reject(new WebSocketError('Failed to create WebSocket'));
       }
@@ -111,13 +111,13 @@ export class AgentWebSocketClient {
 
     const delay = Math.min(
       (this.config.reconnectInterval || 1000) * Math.pow(2, this.reconnectAttempts - 1),
-      30000
+      30000,
     );
 
     log.info('Scheduling reconnect', { attempt: this.reconnectAttempts, delay });
 
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    
+
     this.reconnectTimer = setTimeout(() => {
       this.connect().catch(() => {
         // Error handling is done in connect()
@@ -131,12 +131,12 @@ export class AgentWebSocketClient {
     }
     log.debug('Sending message');
     this.ws.send(JSON.stringify(message));
-    
+
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as StreamEvent;
         this.dispatch(data, callbacks);
-      } catch (_err: unknown) {
+      } catch {
         callbacks.onError?.('Failed to parse message');
       }
     };
@@ -147,27 +147,27 @@ export class AgentWebSocketClient {
       case 'text-delta':
         callbacks.onTextDelta?.(event.textDelta);
         break;
-      
+
       case 'tool-call':
         callbacks.onToolCall?.(event.toolCallId, event.toolName, event.args);
         break;
-        
+
       case 'tool-result':
         callbacks.onToolResult?.(event.toolCallId, event.toolName, event.result);
         break;
-        
+
       case 'step-start':
         callbacks.onStepStart?.(event.stepIndex);
         break;
-        
+
       case 'step-finish':
         callbacks.onStepFinish?.(event.stepIndex, event.finishReason);
         break;
-        
+
       case 'finish':
         callbacks.onComplete?.({ text: event.text, usage: event.usage });
         break;
-        
+
       case 'error':
         callbacks.onError?.(event.error);
         break;

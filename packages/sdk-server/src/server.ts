@@ -15,39 +15,41 @@ const log = createLogger('@agntk/server');
 export interface AgentServer {
   /** Hono routes instance */
   routes: ReturnType<typeof createAgentRoutes>;
-  
+
   /** Start the HTTP server */
   start: () => void;
-  
+
   /** Get the server port */
   port: number;
 }
 
 /**
  * Create an agent server with HTTP and WebSocket endpoints
- * 
+ *
  * @example
  * ```typescript
  * import { createAgentServer } from '@agntk/server';
  * import { createAgent } from '@agntk/core';
- * 
+ *
  * const agent = createAgent({ name: 'my-agent', instructions: 'You are a helpful coding assistant.' });
  * const server = createAgentServer({ agent, port: 3001 });
  * server.start();
  * ```
- * 
+ *
  * @param options - Server configuration
  * @returns Server instance with routes and start method
  */
 export function createAgentServer(options: AgentServerOptions = {}): AgentServer {
   const port = options.port ?? 3000;
-  
+
   log.debug('Creating agent server', { port, hasAgent: !!options.agent });
 
   // Create agent if options provided but no agent instance
-  let agent = options.agent;
+  const agent = options.agent;
   if (!agent && options.agentOptions) {
-    log.warn('agentOptions provided but no agent instance. Agent will need to be created separately.');
+    log.warn(
+      'agentOptions provided but no agent instance. Agent will need to be created separately.',
+    );
   }
 
   // Create a base Hono app for WebSocket support
@@ -65,7 +67,7 @@ export function createAgentServer(options: AgentServerOptions = {}): AgentServer
 
   const start = () => {
     const server = serve({
-      fetch: app.fetch, 
+      fetch: app.fetch,
       port,
     });
 
@@ -75,8 +77,8 @@ export function createAgentServer(options: AgentServerOptions = {}): AgentServer
     log.info('Agent server started', { port, url: `http://localhost:${port}` });
   };
 
-  return { 
-    routes, 
+  return {
+    routes,
     start,
     port,
   };
@@ -84,20 +86,25 @@ export function createAgentServer(options: AgentServerOptions = {}): AgentServer
 
 /**
  * Quick start helper - creates agent and server in one call
- * 
  * @example
  * ```typescript
  * import { quickStart } from '@agntk/server';
- * 
+ *
  * quickStart({ port: 3001 });
  * ```
+ * @param options - Server configuration options
+ * @param options.port - Port number for the server (default: 3000)
+ * @param options.workspaceRoot - Root directory for the workspace
+ * @returns Promise resolving to the server instance
  */
-export async function quickStart(options: {
-  port?: number;
-  workspaceRoot?: string;
-} = {}) {
+export async function quickStart(
+  options: {
+    port?: number;
+    workspaceRoot?: string;
+  } = {},
+) {
   log.info('quickStart called', { options });
-  
+
   const server = createAgentServer({ port: options.port });
   server.start();
   return server;

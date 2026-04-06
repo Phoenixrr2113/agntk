@@ -8,7 +8,11 @@ import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { bearerAuth } from 'hono/bearer-auth';
 import { createLogger, getLogEmitter } from '@agntk/logger';
-import { createLoggingMiddleware, createRateLimitMiddleware, createBodyLimitMiddleware } from './middleware';
+import {
+  createLoggingMiddleware,
+  createRateLimitMiddleware,
+  createBodyLimitMiddleware,
+} from './middleware';
 import { ConcurrencyQueue, QueueFullError, QueueTimeoutError } from './queue';
 import { StreamEventBuffer } from './stream-buffer';
 import type { AgentServerOptions, DurableAgentInstance } from './types';
@@ -51,7 +55,7 @@ interface StreamRequest {
 
 /**
  * Create agent HTTP routes with Hono
- * 
+ *
  * @param serverOptions - Server configuration options
  * @returns Hono app with agent routes
  */
@@ -60,12 +64,21 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
 
   // Configure CORS
   const corsOrigin = serverOptions.corsOrigin ?? '*';
-  app.use('/*', cors({
-    origin: Array.isArray(corsOrigin) ? corsOrigin : corsOrigin,
-    allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-workflow-run-id', 'Last-Event-ID'],
-    exposeHeaders: ['x-workflow-run-id'],
-  }));
+  app.use(
+    '/*',
+    cors({
+      origin: Array.isArray(corsOrigin) ? corsOrigin : corsOrigin,
+      allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+      allowHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-api-key',
+        'x-workflow-run-id',
+        'Last-Event-ID',
+      ],
+      exposeHeaders: ['x-workflow-run-id'],
+    }),
+  );
 
   // Configure Middleware
   app.use('*', createLoggingMiddleware());
@@ -74,7 +87,7 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   if (!serverOptions.apiKey) {
     log.warn(
       '⚠️  No apiKey configured — all server endpoints are publicly accessible. ' +
-      'Set apiKey in AgentServerOptions for production use.',
+        'Set apiKey in AgentServerOptions for production use.',
     );
   }
 
@@ -85,8 +98,8 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   // Accepts both `Authorization: Bearer <token>` and `x-api-key: <token>`.
   const authMiddleware = serverOptions.apiKey
     ? bearerAuth({
-      verifyToken: (token) => token === serverOptions.apiKey,
-    })
+        verifyToken: (token) => token === serverOptions.apiKey,
+      })
     : null;
 
   // Apply rate limiting to all agent endpoints
@@ -99,10 +112,14 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   // coverage to config r/w, logs streaming, and hook approval endpoints.
   if (authMiddleware) {
     const PROTECTED_ROUTES = [
-      '/generate', '/stream', '/chat',
-      '/status', '/config',
+      '/generate',
+      '/stream',
+      '/chat',
+      '/status',
+      '/config',
       '/logs',
-      '/hooks', '/hooks/*',
+      '/hooks',
+      '/hooks/*',
       '/queue',
     ];
     for (const route of PROTECTED_ROUTES) {
@@ -117,14 +134,18 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   const streamBuffer = new StreamEventBuffer(serverOptions.streamBuffer);
 
   // Queue stats endpoint
-  app.get('/queue', (c) => c.json(queue?.getStats() ?? { active: 0, queued: 0, available: Infinity }));
+  app.get('/queue', (c) =>
+    c.json(queue?.getStats() ?? { active: 0, queued: 0, available: Infinity }),
+  );
 
   // Health check endpoint
-  app.get('/health', (c) => c.json({ 
-    status: 'ok', 
-    version: '0.1.0',
-    timestamp: new Date().toISOString(),
-  }));
+  app.get('/health', (c) =>
+    c.json({
+      status: 'ok',
+      version: '0.1.0',
+      timestamp: new Date().toISOString(),
+    }),
+  );
 
   // ============================================================================
   // Dashboard Endpoints
@@ -132,15 +153,17 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
 
   // Status endpoint - agent info
   app.get('/status', (c) => {
-    const agent = serverOptions.agent as {
-      name?: string;
-      tools?: { name: string }[];
-      model?: string;
-    } | undefined;
+    const agent = serverOptions.agent as
+      | {
+          name?: string;
+          tools?: { name: string }[];
+          model?: string;
+        }
+      | undefined;
 
     return c.json({
       name: agent?.name ?? 'unknown',
-      tools: agent?.tools?.map(t => t.name) ?? [],
+      tools: agent?.tools?.map((t) => t.name) ?? [],
       model: agent?.model ?? 'unknown',
       version: '0.1.0',
     });
@@ -149,7 +172,8 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   // Config endpoint - GET
   app.get('/config', async (c) => {
     try {
-      const configPath = serverOptions.configPath ?? path.join(process.cwd(), 'agent-sdk.config.yaml');
+      const configPath =
+        serverOptions.configPath ?? path.join(process.cwd(), 'agent-sdk.config.yaml');
       if (!fs.existsSync(configPath)) {
         return c.text('# No config file found', 200);
       }
@@ -164,7 +188,8 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   // Config endpoint - PUT
   app.put('/config', async (c) => {
     try {
-      const configPath = serverOptions.configPath ?? path.join(process.cwd(), 'agent-sdk.config.yaml');
+      const configPath =
+        serverOptions.configPath ?? path.join(process.cwd(), 'agent-sdk.config.yaml');
       const body = await c.req.text();
       fs.writeFileSync(configPath, body, 'utf-8');
       log.info('Config updated', { path: configPath });
@@ -211,18 +236,22 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   app.post('/generate', async (c) => {
     try {
       const body = await c.req.json<GenerateRequest>();
-      
-      const prompt = body.prompt ?? body.messages?.map(m => `${m.role}: ${m.content}`).join('\n') ?? '';
-      
+
+      const prompt =
+        body.prompt ?? body.messages?.map((m) => `${m.role}: ${m.content}`).join('\n') ?? '';
+
       if (!prompt) {
         return c.json({ error: 'prompt or messages is required' }, 400);
       }
 
       const agent = serverOptions.agent;
       if (!agent) {
-        return c.json({ 
-          error: 'Agent not configured. Provide agent or agentOptions to createAgentServer.',
-        }, 500);
+        return c.json(
+          {
+            error: 'Agent not configured. Provide agent or agentOptions to createAgentServer.',
+          },
+          500,
+        );
       }
 
       // Acquire queue slot
@@ -255,7 +284,10 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
         });
 
         // Drain the stream to completion
-        for await (const _chunk of result.fullStream) { /* drain */ }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for await (const _chunk of result.fullStream) {
+          void _chunk;
+        }
         const text = await result.text;
 
         return c.json({
@@ -306,27 +338,30 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
           if (streamBuffer.isCompleted(reconnectRunId)) {
             await stream.writeSSE({ event: 'done', data: '' });
           }
-          // Otherwise, the stream stays open for live events
-          // (in a production impl, this would subscribe to live updates)
         });
       }
 
-      const prompt = body.prompt ?? body.messages?.map(m => `${m.role}: ${m.content}`).join('\n') ?? '';
-      
+      const prompt =
+        body.prompt ?? body.messages?.map((m) => `${m.role}: ${m.content}`).join('\n') ?? '';
+
       if (!prompt) {
         return c.json({ error: 'prompt or messages is required' }, 400);
       }
 
       const agent = serverOptions.agent;
       if (!agent) {
-        return c.json({ 
-          error: 'Agent not configured. Provide agent or agentOptions to createAgentServer.',
-        }, 500);
+        return c.json(
+          {
+            error: 'Agent not configured. Provide agent or agentOptions to createAgentServer.',
+          },
+          500,
+        );
       }
 
       // Duck-type check for durable agent
       const durableAgent = agent as DurableAgentInstance;
-      const isDurable = typeof durableAgent.workflowRunId === 'string' || durableAgent.isWorkflowActive === true;
+      const isDurable =
+        typeof durableAgent.workflowRunId === 'string' || durableAgent.isWorkflowActive === true;
       const runId = isDurable ? (durableAgent.workflowRunId ?? crypto.randomUUID()) : undefined;
 
       const agentInstance = agent as {
@@ -355,7 +390,9 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
             if (chunk.type === 'text-delta') {
               const textDelta = (chunk as { textDelta?: string }).textDelta ?? '';
               const eventData = JSON.stringify({ type: 'text-delta', textDelta });
-              const eventId = runId ? streamBuffer.store(runId, 'text-delta', eventData) : undefined;
+              const eventId = runId
+                ? streamBuffer.store(runId, 'text-delta', eventData)
+                : undefined;
 
               await stream.writeSSE({
                 id: eventId,
@@ -400,9 +437,10 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   app.post('/chat', async (c) => {
     try {
       const body = await c.req.json<StreamRequest & { sessionId?: string }>();
-      
-      const prompt = body.prompt ?? body.messages?.map(m => `${m.role}: ${m.content}`).join('\n') ?? '';
-      
+
+      const prompt =
+        body.prompt ?? body.messages?.map((m) => `${m.role}: ${m.content}`).join('\n') ?? '';
+
       if (!prompt) {
         return c.json({ error: 'prompt or messages is required' }, 400);
       }
@@ -426,8 +464,8 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
         });
 
         for await (const chunk of response.fullStream) {
-          await stream.writeSSE({ 
-            event: chunk.type, 
+          await stream.writeSSE({
+            event: chunk.type,
             data: JSON.stringify(chunk),
           });
         }
@@ -493,7 +531,9 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   app.post('/hooks/:id/resume', async (c) => {
     try {
       const hookId = c.req.param('id');
-      const body = await c.req.json<{ payload?: unknown }>().catch(() => ({} as { payload?: unknown }));
+      const body = await c.req
+        .json<{ payload?: unknown }>()
+        .catch(() => ({}) as { payload?: unknown });
       const registry = getHookRegistry();
 
       log.info('Hook resume requested', { hookId });
@@ -525,7 +565,7 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
   app.post('/hooks/:id/reject', async (c) => {
     try {
       const hookId = c.req.param('id');
-      const body = await c.req.json<{ reason?: string }>().catch(() => ({} as { reason?: string }));
+      const body = await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string });
       const registry = getHookRegistry();
 
       log.info('Hook rejection requested', { hookId });
@@ -571,67 +611,78 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
             log.info('Browser stream WebSocket connected');
 
             // Dynamically import to avoid hard dependency if browser tool isn't used
-            import('@agntk/core/advanced').then(({ createBrowserStream }) => {
-              const streamConfig = {
-                fps: serverOptions.browserStream?.fps ?? 2,
-                quality: serverOptions.browserStream?.quality ?? 60,
-              };
+            import('@agntk/core/advanced')
+              .then(({ createBrowserStream }) => {
+                const streamConfig = {
+                  fps: serverOptions.browserStream?.fps ?? 2,
+                  quality: serverOptions.browserStream?.quality ?? 60,
+                };
 
-              streamEmitter = createBrowserStream(streamConfig);
+                streamEmitter = createBrowserStream(streamConfig);
 
-              // Forward frames to WebSocket client
-              streamEmitter.on('frame', (frame: any) => {
+                // Forward frames to WebSocket client
+                streamEmitter.on('frame', (frame: any) => {
+                  if (ws.readyState === 1) {
+                    ws.send(
+                      JSON.stringify({
+                        type: 'frame',
+                        data: frame.data,
+                        timestamp: frame.timestamp,
+                        sequence: frame.sequence,
+                      }),
+                    );
+                  }
+                });
+
+                // Forward errors
+                streamEmitter.on('error', (errorMsg: string) => {
+                  if (ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'error', error: errorMsg }));
+                  }
+                });
+
+                // Notify started
+                streamEmitter.on('started', (config: any) => {
+                  if (ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'started', config }));
+                  }
+                });
+
+                // Notify stopped
+                streamEmitter.on('stopped', () => {
+                  if (ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: 'stopped' }));
+                  }
+                });
+
+                // Input acknowledgments
+                streamEmitter.on(
+                  'input-ack',
+                  (inputType: string, success: boolean, error?: string) => {
+                    if (ws.readyState === 1) {
+                      ws.send(JSON.stringify({ type: 'input-ack', inputType, success, error }));
+                    }
+                  },
+                );
+
+                // Auto-start the stream
+                streamEmitter.start().catch((err: Error) => {
+                  log.error('Failed to start browser stream', { error: err.message });
+                  if (ws.readyState === 1) {
+                    ws.send(
+                      JSON.stringify({ type: 'error', error: `Failed to start: ${err.message}` }),
+                    );
+                  }
+                });
+              })
+              .catch((err: Error) => {
+                log.error('Failed to load browser stream module', { error: err.message });
                 if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({
-                    type: 'frame',
-                    data: frame.data,
-                    timestamp: frame.timestamp,
-                    sequence: frame.sequence,
-                  }));
+                  ws.send(
+                    JSON.stringify({ type: 'error', error: 'Browser stream module unavailable' }),
+                  );
                 }
               });
-
-              // Forward errors
-              streamEmitter.on('error', (errorMsg: string) => {
-                if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({ type: 'error', error: errorMsg }));
-                }
-              });
-
-              // Notify started
-              streamEmitter.on('started', (config: any) => {
-                if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({ type: 'started', config }));
-                }
-              });
-
-              // Notify stopped
-              streamEmitter.on('stopped', () => {
-                if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({ type: 'stopped' }));
-                }
-              });
-
-              // Input acknowledgments
-              streamEmitter.on('input-ack', (inputType: string, success: boolean, error?: string) => {
-                if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({ type: 'input-ack', inputType, success, error }));
-                }
-              });
-
-              // Auto-start the stream
-              streamEmitter.start().catch((err: Error) => {
-                log.error('Failed to start browser stream', { error: err.message });
-                if (ws.readyState === 1) {
-                  ws.send(JSON.stringify({ type: 'error', error: `Failed to start: ${err.message}` }));
-                }
-              });
-            }).catch((err: Error) => {
-              log.error('Failed to load browser stream module', { error: err.message });
-              if (ws.readyState === 1) {
-                ws.send(JSON.stringify({ type: 'error', error: 'Browser stream module unavailable' }));
-              }
-            });
           },
 
           onMessage: (evt: { data: unknown }, ws: any) => {
@@ -689,7 +740,9 @@ export function createAgentRoutes(serverOptions: AgentServerOptions = {}) {
                     height: msg.height as number | undefined,
                   });
                   if (ws.readyState === 1) {
-                    ws.send(JSON.stringify({ type: 'config-ack', config: streamEmitter.getConfig() }));
+                    ws.send(
+                      JSON.stringify({ type: 'config-ack', config: streamEmitter.getConfig() }),
+                    );
                   }
                   break;
 

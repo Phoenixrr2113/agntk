@@ -2,9 +2,13 @@
  * @agntk/server - Middleware Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
-import { createLoggingMiddleware, createRateLimitMiddleware, createAuthMiddleware } from '../middleware';
+import {
+  createLoggingMiddleware,
+  createRateLimitMiddleware,
+  createAuthMiddleware,
+} from '../middleware';
 
 describe('Middleware', () => {
   describe('createLoggingMiddleware', () => {
@@ -40,10 +44,12 @@ describe('Middleware', () => {
       app.use('*', createRateLimitMiddleware({ windowMs: 60000, max: 2 }));
       app.get('/test', (c) => c.json({ ok: true }));
 
-      const makeRequest = () => 
-        app.fetch(new Request('http://localhost/test', {
-          headers: { 'x-forwarded-for': '192.168.1.1' },
-        }));
+      const makeRequest = () =>
+        app.fetch(
+          new Request('http://localhost/test', {
+            headers: { 'x-forwarded-for': '192.168.1.1' },
+          }),
+        );
 
       const res1 = await makeRequest();
       expect(res1.status).toBe(200);
@@ -61,40 +67,51 @@ describe('Middleware', () => {
 
     it('should use custom key generator', async () => {
       const app = new Hono();
-      app.use('*', createRateLimitMiddleware({ 
-        windowMs: 60000, 
-        max: 1,
-        keyGenerator: (c) => c.req.header('x-user-id') || 'anonymous',
-      }));
+      app.use(
+        '*',
+        createRateLimitMiddleware({
+          windowMs: 60000,
+          max: 1,
+          keyGenerator: (c) => c.req.header('x-user-id') || 'anonymous',
+        }),
+      );
       app.get('/test', (c) => c.json({ ok: true }));
 
-      const res1 = await app.fetch(new Request('http://localhost/test', {
-        headers: { 'x-user-id': 'user-1' },
-      }));
+      const res1 = await app.fetch(
+        new Request('http://localhost/test', {
+          headers: { 'x-user-id': 'user-1' },
+        }),
+      );
       expect(res1.status).toBe(200);
 
-      const res2 = await app.fetch(new Request('http://localhost/test', {
-        headers: { 'x-user-id': 'user-2' },
-      }));
+      const res2 = await app.fetch(
+        new Request('http://localhost/test', {
+          headers: { 'x-user-id': 'user-2' },
+        }),
+      );
       expect(res2.status).toBe(200);
 
-      const res3 = await app.fetch(new Request('http://localhost/test', {
-        headers: { 'x-user-id': 'user-1' },
-      }));
+      const res3 = await app.fetch(
+        new Request('http://localhost/test', {
+          headers: { 'x-user-id': 'user-1' },
+        }),
+      );
       expect(res3.status).toBe(429);
     });
 
     it('should reset after window expires', async () => {
       vi.useFakeTimers();
-      
+
       const app = new Hono();
       app.use('*', createRateLimitMiddleware({ windowMs: 1000, max: 1 }));
       app.get('/test', (c) => c.json({ ok: true }));
 
-      const makeRequest = () => 
-        app.fetch(new Request('http://localhost/test', {
-          headers: { 'x-forwarded-for': '10.0.0.1' },
-        }));
+      const makeRequest = () =>
+        app.fetch(
+          new Request('http://localhost/test', {
+            headers: { 'x-forwarded-for': '10.0.0.1' },
+          }),
+        );
 
       const res1 = await makeRequest();
       expect(res1.status).toBe(200);
@@ -168,7 +185,7 @@ describe('Middleware', () => {
       app.get('/test', (c) => c.json({ ok: true }));
 
       const req = new Request('http://localhost/test', {
-        headers: { 'authorization': 'secret' },
+        headers: { authorization: 'secret' },
       });
       const res = await app.fetch(req);
 

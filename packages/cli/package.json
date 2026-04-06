@@ -20,6 +20,7 @@
     "build": "tsc && node ../../scripts/fix-esm-imports.mjs ./dist && chmod +x dist/cli.js",
     "dev": "tsc --watch",
     "test": "vitest",
+    "lint": "eslint src/",
     "clean": "rm -rf dist"
   },
   "dependencies": {

@@ -39,7 +39,12 @@ export interface BrowserStreamConfig {
   height?: number;
 }
 
-export type BrowserStreamState = 'disconnected' | 'connecting' | 'connected' | 'streaming' | 'reconnecting';
+export type BrowserStreamState =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'streaming'
+  | 'reconnecting';
 
 export interface BrowserStreamCallbacks {
   /** Called for each viewport frame */
@@ -135,7 +140,7 @@ export class BrowserStreamClient {
             reject(new Error('Failed to connect to browser stream'));
           }
         };
-      } catch (error) {
+      } catch {
         this.setState('disconnected');
         reject(new Error('Failed to create WebSocket connection'));
       }
@@ -325,7 +330,9 @@ export class BrowserStreamClient {
           break;
 
         default:
-          log.warn('Unknown message type from server', { type: (msg as Record<string, unknown>).type });
+          log.warn('Unknown message type from server', {
+            type: (msg as Record<string, unknown>).type,
+          });
       }
     } catch (err) {
       log.error('Failed to parse server message', { error: String(err) });

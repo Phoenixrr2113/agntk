@@ -36,15 +36,13 @@ export class AgentHttpClient {
   /**
    * Stream a generation request using Server-Sent Events.
    * Returns an AsyncGenerator that yields StreamEvents.
-   * 
+   *
    * Supports resumable streams: when the server is a durable agent,
    * the response includes `x-workflow-run-id`. Use `options.workflowRunId`
    * and `options.lastEventId` to reconnect and replay.
-   *
    * @param request - Chat request with messages
    * @param options - Streaming options (signal for abort, reconnection)
-   * @returns AsyncGenerator yielding stream events with metadata property
-   *
+   * @yields StreamEvent - Stream events with metadata property
    * @example
    * ```typescript
    * const controller = new AbortController();
@@ -66,7 +64,7 @@ export class AgentHttpClient {
    */
   async *generateStream(
     request: ChatRequest,
-    options: GenerateStreamOptions = {}
+    options: GenerateStreamOptions = {},
   ): AsyncGenerator<StreamEvent> & { metadata?: StreamMetadata } {
     log.debug('generateStream', {
       messageCount: request.messages?.length,
@@ -76,7 +74,7 @@ export class AgentHttpClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
+      Accept: 'text/event-stream',
     };
 
     // Add resumable stream headers
@@ -109,6 +107,7 @@ export class AgentHttpClient {
 
     // Attach metadata to the generator (accessible after iteration)
     const metadata: StreamMetadata = { workflowRunId, lastEventId };
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const generator = this;
     (generator as { _lastStreamMetadata?: StreamMetadata })._lastStreamMetadata = metadata;
 
@@ -156,7 +155,7 @@ export class AgentHttpClient {
         if (data && data !== '[DONE]') {
           try {
             yield JSON.parse(data) as StreamEvent;
-          } catch (_e: unknown) {
+          } catch {
             // Ignore parse errors on final chunk
           }
         }

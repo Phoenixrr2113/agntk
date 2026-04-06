@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserStreamClient } from '../browser-stream';
-import type { BrowserStreamCallbacks, BrowserFrame, BrowserStreamConfig } from '../browser-stream';
+import type { BrowserFrame } from '../browser-stream';
 
 // Mock WebSocket
 class MockWebSocket {
@@ -54,13 +54,15 @@ class MockWebSocket {
 // Store last created instance for test access
 let lastMockWs: MockWebSocket | null = null;
 
-vi.stubGlobal('WebSocket', class extends MockWebSocket {
+const MockWebSocketSubclass = class extends MockWebSocket {
   constructor(url: string) {
     super(url);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     lastMockWs = this;
   }
   static override OPEN = 1;
-});
+};
+vi.stubGlobal('WebSocket', MockWebSocketSubclass);
 
 describe('BrowserStreamClient', () => {
   let client: BrowserStreamClient;

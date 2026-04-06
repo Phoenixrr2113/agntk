@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "vitest",
+    "lint": "eslint src/",
     "clean": "rm -rf dist"
   },
   "dependencies": {

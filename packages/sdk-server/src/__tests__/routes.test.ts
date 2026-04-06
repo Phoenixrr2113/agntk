@@ -2,7 +2,7 @@
  * @agntk/server - Routes Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createAgentRoutes } from '../routes';
 
 describe('createAgentRoutes', () => {
@@ -15,12 +15,12 @@ describe('createAgentRoutes', () => {
   describe('GET /health', () => {
     it('should return ok status', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/health');
       const res = await routes.fetch(req);
-      
+
       expect(res.status).toBe(200);
-      
+
       const body = await res.json();
       expect(body.status).toBe('ok');
       expect(body.version).toBeDefined();
@@ -31,32 +31,32 @@ describe('createAgentRoutes', () => {
   describe('POST /generate', () => {
     it('should return 400 if prompt is missing', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      
+
       const res = await routes.fetch(req);
       expect(res.status).toBe(400);
-      
+
       const body = await res.json();
       expect(body.error).toContain('prompt');
     });
 
     it('should return 500 if agent not configured', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: 'Hello' }),
       });
-      
+
       const res = await routes.fetch(req);
       expect(res.status).toBe(500);
-      
+
       const body = await res.json();
       expect(body.error).toContain('Agent not configured');
     });
@@ -85,9 +85,7 @@ describe('createAgentRoutes', () => {
       expect(body.text).toBe('Generated response');
       expect(body.success).toBe(true);
 
-      expect(mockAgent.stream).toHaveBeenCalledWith(
-        expect.objectContaining({ prompt: 'Hello' })
-      );
+      expect(mockAgent.stream).toHaveBeenCalledWith(expect.objectContaining({ prompt: 'Hello' }));
     });
 
     it('should pass options to agent', async () => {
@@ -116,7 +114,7 @@ describe('createAgentRoutes', () => {
         expect.objectContaining({
           prompt: 'Hello',
           options: expect.objectContaining({ userId: 'user-123' }),
-        })
+        }),
       );
     });
   });
@@ -124,26 +122,26 @@ describe('createAgentRoutes', () => {
   describe('POST /stream', () => {
     it('should return 400 if prompt is missing', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      
+
       const res = await routes.fetch(req);
       expect(res.status).toBe(400);
     });
 
     it('should return 500 if agent not configured', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: 'Hello' }),
       });
-      
+
       const res = await routes.fetch(req);
       expect(res.status).toBe(500);
     });
@@ -152,13 +150,13 @@ describe('createAgentRoutes', () => {
   describe('CORS', () => {
     it('should set CORS headers', async () => {
       const routes = createAgentRoutes();
-      
+
       const req = new Request('http://localhost/health', {
         headers: { Origin: 'http://example.com' },
       });
-      
+
       const res = await routes.fetch(req);
-      
+
       expect(res.headers.get('Access-Control-Allow-Origin')).toBeDefined();
     });
   });
