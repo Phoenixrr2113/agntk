@@ -17,3 +17,6 @@ export { createEventLogger } from './events';
 
 export type { InstinctWriterConfig } from './instinct-writer';
 export { createInstinctTool } from './instinct-writer';
+
+export type { JournalEntry, InstinctCandidate, KnowledgeUpdate, SynthesizeJournalOptions } from './journal';
+export { synthesizeJournal } from './journal';
