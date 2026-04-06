@@ -28,3 +28,9 @@ export { createScheduler, parseCron, matchesCron } from './scheduler';
 
 export type { Adapter } from './adapter';
 export { BaseAdapter } from './adapter';
+
+export type { GatewayAction, GatewayRule, GatewayResult, Gateway } from './gateway';
+export { createGateway } from './gateway';
+
+export type { PipelineHandler, PipelineConfig, Pipeline } from './pipeline';
+export { createPipeline } from './pipeline';
