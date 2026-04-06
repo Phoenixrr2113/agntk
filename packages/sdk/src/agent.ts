@@ -34,6 +34,7 @@ import { loadMemoryContext } from './memory/loader';
 import { initObservability, createTelemetrySettings } from './observability';
 import { buildDynamicSystemPrompt } from './prompts/context';
 import { createGovernanceLoader } from './harness/governance';
+import { createInstinctTool } from './harness/instinct-writer';
 
 const log = createLogger('@agntk/core:agent');
 
@@ -365,6 +366,14 @@ export function createAgent(options: AgentOptions, _internal: InternalOptions = 
             if (governancePrompt) {
               augmentedSystemPrompt = augmentedSystemPrompt + '\n' + governancePrompt;
               agentLog.debug('Governance prompt injected', { chars: governancePrompt.length });
+            }
+
+            if (options.harness.instincts !== false) {
+              tools = {
+                ...tools,
+                create_instinct: createInstinctTool({ harnessRoot }),
+              };
+              agentLog.debug('Instinct writer tool registered');
             }
           } catch (err) {
             agentLog.warn('Governance loading failed', {

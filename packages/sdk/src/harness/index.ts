@@ -14,3 +14,6 @@ export { createGovernanceLoader } from './governance';
 
 export type { AgentEvent, AgentEventType, AgentEventOutcome, EventLogger } from './events';
 export { createEventLogger } from './events';
+
+export type { InstinctWriterConfig } from './instinct-writer';
+export { createInstinctTool } from './instinct-writer';
