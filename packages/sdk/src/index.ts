@@ -44,7 +44,8 @@ export type { ReflectionStrategy, ReflectionConfig } from './reflection';
 export type { MemoryStore, MemoryConfig } from './memory/types';
 export { MarkdownMemoryStore } from './memory/store';
 export type { MarkdownMemoryStoreOptions } from './memory/store';
-export { loadMemoryContext } from './memory/loader';
+export { loadMemoryContext, loadMemoryContextWithBudget } from './memory/loader';
+export type { BudgetedLoadOptions } from './memory/loader';
 
 export { shutdownObservability } from './observability';
 
