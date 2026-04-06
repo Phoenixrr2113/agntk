@@ -20,3 +20,5 @@ export { createInstinctTool } from './instinct-writer';
 
 export type { JournalEntry, InstinctCandidate, KnowledgeUpdate, SynthesizeJournalOptions } from './journal';
 export { synthesizeJournal } from './journal';
+
+export { buildIndex, rebuildAllIndexes } from './index-builder';
