@@ -61,6 +61,11 @@ _agntk_completions() {
       COMPREPLY=( $(compgen -W "bash zsh fish" -- "$cur") )
       return
       ;;
+    install|uninstall|evaluate)
+      # File completion for capability management commands
+      COMPREPLY=( $(compgen -f -X '!*.md' -- "$cur") )
+      return
+      ;;
     -n|--name)
       # Complete agent names for --name flag
       local agents_dir="${agentsPath}"
@@ -112,6 +117,9 @@ function generateZsh(): string {
     'stop:Send SIGTERM to a running agent process',
     'clean:Interactively prune stale or unused agents',
     'completions:Output shell completion script',
+    'install:Install a capability into the harness',
+    'uninstall:Remove an installed capability',
+    'evaluate:Validate a capability file',
   ];
 
   return `#compdef agntk
@@ -155,6 +163,9 @@ ${commandDescs.map((d) => `    '${d}'`).join('\n')}
         completions)
           _values 'shell' bash zsh fish
           ;;
+        install|uninstall|evaluate)
+          _files -g '*.md'
+          ;;
       esac
       ;;
     agents)
@@ -191,6 +202,9 @@ function generateFish(): string {
     ['stop', 'Send SIGTERM to a running agent process'],
     ['clean', 'Interactively prune stale or unused agents'],
     ['completions', 'Output shell completion script'],
+    ['install', 'Install a capability into the harness'],
+    ['uninstall', 'Remove an installed capability'],
+    ['evaluate', 'Validate a capability file'],
   ];
 
   const flagEntries: Array<{ short?: string; long: string; desc: string }> = [
