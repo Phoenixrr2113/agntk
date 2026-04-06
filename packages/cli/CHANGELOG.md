@@ -1,5 +1,12 @@
 # @agntk/cli
 
+## 1.3.1
+
+### Patch Changes
+
+- Auto-generated changeset from conventional commits:
+  - **@agntk/cli** (patch): fix: update shell completions and deduplicate CI workflows
+
 ## 1.3.0
 
 ### Minor Changes
