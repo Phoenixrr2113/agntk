@@ -37,16 +37,16 @@
   "dependencies": {
     "@agntk/logger": "workspace:*",
     "@agntk/search": "workspace:*",
-    "@ai-sdk/openai-compatible": "^2.0.37",
-    "ai": "6.0.141",
-    "yaml": "^2.8.3",
-    "zod": "^4.3.6"
+    "@ai-sdk/openai-compatible": "^2.0.46",
+    "ai": "6.0.175",
+    "yaml": "^2.8.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@agntk/config-typescript": "workspace:*",
-    "@types/node": "^25.5.0",
-    "typescript": "^5.7.3",
-    "vitest": "^4.1.2"
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   },
   "peerDependencies": {
     "@opentelemetry/sdk-trace-node": "*",
