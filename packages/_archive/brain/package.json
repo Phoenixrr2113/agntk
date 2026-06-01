@@ -52,7 +52,7 @@
     "tree-sitter-python": "^0.23.6",
     "tree-sitter-typescript": "^0.23.2",
     "typescript": "^5.7.3",
-    "vitest": "^3.2.3"
+    "vitest": "^4.1.8"
   },
   "peerDependencies": {
     "tree-sitter": "^0.22.4",
